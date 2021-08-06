@@ -1,0 +1,11 @@
+<launch>
+    <include file="$(find sawyer_moveit_config)/launch/sawyer_moveit.launch">
+      <arg name="electric_gripper" default="true"/>
+    </include>
+
+
+    <node name="sawyer" pkg="sawyer_move" type="joint_position_keyboard" output="screen" cwd="node" >
+      <remap from="joint_states" to="robot/joint_states"/> 
+    </node>
+
+</launch>
