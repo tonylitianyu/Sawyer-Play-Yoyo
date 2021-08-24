@@ -157,6 +157,7 @@ include_directories(
 # in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   nodes/joint_position_keyboard
+  nodes/sawyer_jac_move
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

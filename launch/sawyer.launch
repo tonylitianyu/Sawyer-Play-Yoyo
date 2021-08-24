@@ -1,10 +1,16 @@
 <launch>
-    <include file="$(find sawyer_moveit_config)/launch/sawyer_moveit.launch">
-      <arg name="electric_gripper" default="true"/>
-    </include>
+     <param name="robot_description" command="$(find xacro)/xacro --inorder $(find sawyer_description)/urdf/sawyer.urdf.xacro electric_gripper:=true" />
+
+     <rosparam
+         file="$(find sawyer_kdl)/config/saywer_kdl_params.yaml"
+         command="load" />
+
+     <rosparam
+         file="$(find sawyer_description)/params/named_poses.yaml"
+         command="load" />
 
 
-    <node name="sawyer" pkg="sawyer_move" type="joint_position_keyboard" output="screen" cwd="node" >
+    <node name="sawyer" pkg="sawyer_move" type="sawyer_jac_move" output="screen" cwd="node" >
       <remap from="joint_states" to="robot/joint_states"/> 
     </node>
 

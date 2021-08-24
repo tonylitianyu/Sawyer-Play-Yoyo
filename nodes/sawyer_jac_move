@@ -1,0 +1,333 @@
+#!/usr/bin/env python3
+
+
+import argparse
+
+import rospy
+import numpy as np
+from intera_core_msgs.msg import JointCommand
+import intera_external_devices
+import intera_interface
+import intera_control
+from intera_interface import CHECK_VERSION
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Header
+from std_srvs.srv import Empty, EmptyResponse
+import pygame
+
+import sympy as sp
+from sympy import symbols, Eq, solve, init_printing, simplify, Function, Matrix
+
+import PyKDL as kdl
+import kdl_parser_py.urdf as kdl_parser
+
+# import intera_interface
+# import intera_external_devices
+
+# from intera_interface import CHECK_VERSION
+
+class SawyerMove:
+
+    def __init__(self) -> None:
+        self.joint_state_sub = rospy.Subscriber('/robot/joint_states', JointState, self.jss_callback)
+        self.joint_action_pub = rospy.Publisher('/robot/limb/right/joint_command', JointCommand, queue_size=10)
+        #self.start_srv = rospy.Service("start", Empty, self.start_callback)
+        self.curr_joint_pos = np.zeros(9)
+        self.joint_names = []
+
+
+
+        self.move_mag = 1.0
+        self.vel_mag = 0.0
+        self.yc = 0.4
+        self.xc = 0.4
+
+        self.start_flag = False
+        self.adjust = 0
+
+        self.preparing_joint = True
+
+        self.setup_jac()
+
+
+    def setup_jac(self):
+        # load in ros parameters
+        self.baselink = rospy.get_param("sawyer/baselink")
+        self.endlink = rospy.get_param("sawyer/endlink")
+        flag, self.tree = kdl_parser.treeFromParam("/robot_description")
+
+        self.joint_names = rospy.get_param("named_poses/right/joint_names")
+        print (self.joint_names)
+
+        # build kinematic chain and fk and jacobian solvers
+        chain_ee = self.tree.getChain(self.baselink, self.endlink)
+        self.fk_ee = kdl.ChainFkSolverPos_recursive(chain_ee)
+        self.jac_ee = kdl.ChainJntToJacSolver(chain_ee)
+
+        # building robot joint state
+        self.num_joints = chain_ee.getNrOfJoints()
+        self.joints = kdl.JntArray(self.num_joints)
+
+
+
+
+        self.jac_mat = []
+
+
+
+
+
+    def height_to_joints(self, height):
+        #two links IK
+        #wrist max_height = 0.4
+
+        L1 = 0.4
+        L4 = (126.5 + 273.5)/1000
+
+        h_sq = (self.xc**2) + (height**2)
+        b = np.arccos((h_sq - (L1**2) - (L4**2))/ (2*L1*L4))
+        a = -(np.arccos((L4**2 - h_sq - L1**2)/(-2*np.sqrt(h_sq)*L1)) + np.arctan2(height,self.xc))
+        c = (-a) + np.deg2rad(90) - b
+
+        return b, a, c
+
+    def kdl_to_mat(self, m):
+        mat =  np.mat(np.zeros((m.rows(), m.columns())))
+        for i in range(m.rows()):
+            for j in range(m.columns()):
+                mat[i,j] = m[i,j]
+        return np.array(mat)
+
+    def jss_callback(self, data):
+        self.curr_joint_pos = data.position
+
+        #self.joint_names = data.name
+
+        if self.start_flag:
+
+            if len(data.name) > 1:
+                for i, n in enumerate(self.joint_names):
+                    index = data.name.index(n)
+                    self.joints[i] = data.position[index]
+
+            frame = kdl.Frame()
+            self.fk_ee.JntToCart(self.joints, frame)
+            # print(" ")
+            # print("position: ")
+            # print(frame.p)
+            # print("orientation")
+            # print(frame.M)
+            # print(" ")
+            
+
+
+            if frame.p[2] > 0.75:
+                self.vel_mag = -0.22
+            
+            if frame.p[2] < 0.60:
+                self.vel_mag = 0.22
+
+
+            if abs(frame.p[2] - 0.587) < 1e-2 and self.adjust == 0:
+                self.adjust = 1
+
+            if abs(frame.p[2] - 0.587) > 1e-2:
+                self.adjust = 0
+
+            jacobian = kdl.Jacobian(self.num_joints)
+            self.jac_ee.JntToJac(self.joints, jacobian)
+
+            self.jac_mat = self.kdl_to_mat(jacobian)
+        
+
+        
+
+
+    # def start_callback(self, emp):
+    #     self.start_flag = True
+        
+    #     return EmptyResponse()
+
+
+    def move_down(self, jac_f):
+        if len(self.curr_joint_pos) == 0:
+            print('joint angle not publishing yet')
+            return
+
+        inv_jac = np.linalg.pinv(self.jac_mat)
+
+        ee_vel_val = np.array([0.0, 0.0, -0.5, 0.0, 0.0, 0.0]).reshape(-1,1)
+        joint_vel_val = (inv_jac@ee_vel_val).flatten()
+
+        a, b, c = joint_vel_val[0], joint_vel_val[1], joint_vel_val[2]
+
+        jc = JointCommand()
+        jc.mode = 2
+        jc.names = self.joint_names
+
+
+        jc.velocity = joint_vel_val
+
+
+        
+        self.joint_action_pub.publish(jc)
+
+
+
+
+    def move_up(self, jac_f):
+        if len(self.curr_joint_pos) == 0:
+            print('joint angle not publishing yet')
+            return
+
+
+        inv_jac = np.linalg.pinv(self.jac_mat)
+
+        ee_vel_val = np.array([0.0, 0.0, 0.5, 0.0, 0.0, 0.0]).reshape(-1,1)
+        joint_vel_val = (inv_jac@ee_vel_val).flatten()
+
+        jc = JointCommand()
+        jc.mode = 2
+        jc.names = self.joint_names
+
+
+        jc.velocity = jc.velocity = joint_vel_val
+
+        
+        self.joint_action_pub.publish(jc)
+
+
+
+    def init_joints(self):
+        if len(list(self.curr_joint_pos)) > 2:  #?????why would there be empty
+            a = np.deg2rad(-90)
+            b = np.deg2rad(90)
+            c = np.deg2rad(90)
+
+            goal_joints = [0.0, a, 0.0, b, 0.0, c, 1.70]
+
+
+
+            jc_pos = JointCommand()
+            jc_pos.mode = 1
+            jc_pos.names = self.joint_names
+            jc_pos.position = goal_joints
+            self.joint_action_pub.publish(jc_pos)
+            
+            curr_joint_arr = np.array(list(self.curr_joint_pos))[1:8]
+            
+
+            if np.allclose(goal_joints, curr_joint_arr, atol=0.01):
+                print("ready")
+                self.preparing_joint = False
+
+
+
+    def loop(self):
+        if self.start_flag:
+
+            if self.adjust != 1:
+                #print(self.vel_mag)
+                inv_jac = np.linalg.pinv(self.jac_mat)
+
+                ee_vel_val = np.array([0.0, 0.0, self.vel_mag, 0.0, 0.0, 0.0]).reshape(-1,1)
+                joint_vel_val = (inv_jac@ee_vel_val).flatten()
+
+                jc = JointCommand()
+                jc.mode = 2
+                jc.names = self.joint_names
+                jc.velocity = joint_vel_val
+                self.joint_action_pub.publish(jc)   
+
+            else:
+                print("adjustment")
+
+                jc_pos = JointCommand()
+                jc_pos.mode = 1
+                jc_pos.names = ['right_j1', 'right_j5']
+                jc_pos.position = [np.deg2rad(-90), np.deg2rad(90)]
+                self.joint_action_pub.publish(jc_pos)
+
+
+                self.adjust = 2
+
+
+
+
+def main():
+    print('ok')
+
+    rospy.init_node('sawyer_move')
+    r = rospy.Rate(25)
+
+
+    sm = SawyerMove()
+
+    pygame.init()
+    screen = pygame.display.set_mode((100,100))
+
+    #gripper
+    rp = intera_interface.RobotParams()
+    valid_limbs = rp.get_limb_names()
+    print("Getting robot state...")
+    rs = intera_interface.RobotEnable(CHECK_VERSION)
+    init_state = rs.state()
+    gripper = None
+    gripper = intera_interface.Gripper(valid_limbs[0] + '_gripper')
+    gripper.set_cmd_velocity(gripper.MAX_VELOCITY)
+    close_pos = 0.016
+    open_pos = 0.10
+    gripper.set_position(close_pos)
+
+
+
+
+    #task_init(valid_limbs[0])
+
+    sm.init_joints()
+
+
+
+    while not rospy.is_shutdown():
+
+        if sm.preparing_joint:
+            sm.init_joints()
+
+        else:
+            for event in pygame.event.get():
+
+                if event.type == pygame.KEYDOWN:
+
+                    if event.key == pygame.K_q:
+                        sm.start_flag = True
+                        gripper.open()
+                        rospy.sleep(0.5)
+                        gripper.close()
+                        sm.vel_mag = 0.2
+
+            keys_pressed = pygame.key.get_pressed()
+            if keys_pressed[pygame.K_w]:
+                print("move up")
+
+                #sm.move_up(jac_f)
+                sm.vel_mag += 0.2
+            if keys_pressed[pygame.K_s]:
+                print("move_down")
+                sm.vel_mag -= 0.2
+                
+                #sm.move_down(jac_f)
+
+            if keys_pressed[pygame.K_e]:
+                sm.vel_mag = -sm.vel_mag
+
+            if keys_pressed[pygame.K_z]:
+                sm.vel_mag = 0.0
+
+            sm.loop()
+        r.sleep()
+
+
+
+
+if __name__ == '__main__':
+    main()
