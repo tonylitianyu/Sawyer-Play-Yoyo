@@ -48,9 +48,14 @@ def apriltag_detection(gray_img):
 
 cap = EasyPySpin.VideoCapture(0)
 
-cap.set(cv2.CAP_PROP_FPS, 300)
+cap.set(cv2.CAP_PROP_FPS, 500)
 fps  = cap.get_pyspin_value("AcquisitionFrameRate")
-print(fps)
+print('fps ' + str(fps))
+
+width  = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+print("image width: " + str(width))
+height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+print("image height: " + str(height))
 
 
 iter = 0
@@ -65,7 +70,7 @@ while True:
         yoyo_center = ['None', 'None']
 
     file.write(delim.join(yoyo_center) + "\n")
-    print(yoyo_center)
+    # print(yoyo_center)
 
     # cv2.imshow('img', frame)
     # im = Image.fromarray(frame)
