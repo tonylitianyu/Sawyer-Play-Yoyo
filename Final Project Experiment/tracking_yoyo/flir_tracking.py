@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 import EasyPySpin
 import apriltag
 from PIL import Image
@@ -34,7 +35,7 @@ def apriltag_detection(gray_img):
         cv2.circle(gray_img, (cX, cY), 5, (0, 0, 255), -1)
         # draw the tag family on the image
         tagID = str(r.tag_id)#tag_family.decode("utf-8")
-        if r.tag_id == 4:
+        if r.tag_id == 2:
             #yoyo_center.append((cX,cY))
             #print(cX,cY)
             yoyo_center = [str(cX), str(cY)]
@@ -60,19 +61,28 @@ print("image height: " + str(height))
 
 iter = 0
 file = open("yoyo_pos.txt","w")
-start = time.time()
+#start = time.time()
 while True:
     ret, frame = cap.read()
+
+    frame.setflags(write=1)
+    frame[0:450, 50:200] = np.array(np.fliplr(frame[0:450, 50:200]))
     
+
     yoyo_center = apriltag_detection(frame)
-    delim = ", "
-    if len(yoyo_center) == 0:
-        yoyo_center = ['None', 'None']
 
-    file.write(delim.join(yoyo_center) + "\n")
-    # print(yoyo_center)
 
-    # cv2.imshow('img', frame)
+    # delim = ", "
+    # if len(yoyo_center) == 0:
+    #     yoyo_center = ['None', 'None']
+
+    # file.write(delim.join(yoyo_center) + "\n")
+    #print(yoyo_center)
+
+    cv2.imshow('img', frame)
+    key = cv2.waitKey(30)
+    if key == ord("q"):
+        break
     # im = Image.fromarray(frame)
     # im.save("frames/"+str(iter)+".png")
 

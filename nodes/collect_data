@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+
+import rospy
+import numpy as np
+from std_msgs.msg import Float32
+from datetime import datetime
+import time as time
+class Collect:
+    def __init__(self) -> None:
+        self.yoyo_pos_sub = rospy.Subscriber('yoyo_pos', Float32, self.pos_callback)
+        self.ee_z_vel_sub = rospy.Subscriber('ee_z_vel', Float32, self.ee_z_vel_callback)
+        self.ee_z_pos_sub = rospy.Subscriber('ee_z_pos', Float32, self.ee_z_pos_callback)
+
+        date_time = datetime.now().strftime("%m%d%Y_%H%M%S")
+        self.file = open("../data/"+date_time+".txt", "w+")
+
+        self.curr_yoyo_pos = 0.0
+        self.ee_z_vel = 0.0
+        self.ee_z_pos = 0.0
+        
+        self.t_0 = time.time()
+
+    def pos_callback(self, data):
+        self.curr_yoyo_pos = data.data
+
+    def ee_z_vel_callback(self, data):
+        self.ee_z_vel = data.data
+    
+    def ee_z_pos_callback(self, data):
+        self.ee_z_pos = data.data
+
+    def write_data_to_file(self):
+        single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.ee_z_pos), str(self.ee_z_vel)]
+
+        delim = ", "
+        self.file.write(delim.join(single_line) + "\n")
+
+
+
+def main():
+    rospy.init_node('collect_data')
+    r = rospy.Rate(100)
+
+    collect = Collect()
+
+
+    while not rospy.is_shutdown():
+        collect.write_data_to_file()
+        r.sleep()
+
+
+if __name__ == '__main__':
+    main()

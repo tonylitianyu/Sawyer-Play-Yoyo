@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+
+import rospy
+import numpy as np
+from geometry_msgs.msg import Pose
+from std_msgs.msg import Float32
+import cv2
+import EasyPySpin
+import apriltag
+from PIL import Image
+import time
+
+class Tracking:
+    def __init__(self):
+        self.pos_pub = rospy.Publisher('yoyo_pos', Float32, queue_size=10)
+        self.dis_per_pixel = 0.0
+
+        #Initializing april tags
+        print("[INFO] detecting AprilTags...")
+        self.options = apriltag.DetectorOptions(families="tag36h11")
+        self.detector = apriltag.Detector(self.options)
+
+        #Initializing camera
+        self.cap = EasyPySpin.VideoCapture(0)
+        self.cap.set(cv2.CAP_PROP_FPS, 500)
+        fps  = self.cap.get_pyspin_value("AcquisitionFrameRate")
+        print('fps ' + str(fps))
+        width  = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        print("image width: " + str(width))
+        height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        print("image height: " + str(height))
+
+
+
+    def apriltag_detection(self, gray_img, id):
+        results = self.detector.detect(gray_img)
+        #print("[INFO] {} total AprilTags detected".format(len(results)))
+        # loop over the AprilTag detection results
+
+        yoyo_center = []
+        for i in range(len(results)):
+            r = results[i]
+            # extract the bounding box (x, y)-coordinates for the AprilTag
+            # and convert each of the (x, y)-coordinate pairs to integers
+            (ptA, ptB, ptC, ptD) = r.corners
+            ptB = (int(ptB[0]), int(ptB[1]))
+            ptC = (int(ptC[0]), int(ptC[1]))
+            ptD = (int(ptD[0]), int(ptD[1]))
+            ptA = (int(ptA[0]), int(ptA[1]))
+            # draw the bounding box of the AprilTag detection
+            cv2.line(gray_img, ptA, ptB, (0, 255, 0), 2)
+            cv2.line(gray_img, ptB, ptC, (0, 255, 0), 2)
+            cv2.line(gray_img, ptC, ptD, (0, 255, 0), 2)
+            cv2.line(gray_img, ptD, ptA, (0, 255, 0), 2)
+            # draw the center (x, y)-coordinates of the AprilTag
+            (cX, cY) = (int(r.center[0]), int(r.center[1]))
+
+            cv2.circle(gray_img, (cX, cY), 5, (0, 0, 255), -1)
+            # draw the tag family on the image
+            tagID = str(r.tag_id)#tag_family.decode("utf-8")
+            if r.tag_id == id:
+                #yoyo_center.append((cX,cY))
+                #print(cX,cY)
+                yoyo_center = [cX, cY]
+            cv2.putText(gray_img, tagID, (ptA[0], ptA[1] - 15),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            #print("[INFO] tag family: {}".format(tagFamily))
+
+        return yoyo_center
+
+    def get_tag(self, id):
+        ret, frame = self.cap.read()
+        tags_center = self.apriltag_detection(frame, id) #two tags are 0.2m away vertically
+
+        return tags_center
+
+    def get_pixel_distance(self, tag_1_center, tag_2_center):
+        pixel_diff = tag_2_center[1] - tag_1_center[1] #tag2 - tag1
+        dis_diff = 0.2 #meter
+        self.dis_per_pixel = dis_diff/pixel_diff #meter
+        print(self.dis_per_pixel)
+
+
+
+    def measure(self):
+
+        ret, frame = self.cap.read()
+        yoyo_center = self.apriltag_detection(frame, 0)
+
+        if len(yoyo_center) != 0:
+            yoyo_z_dis = Float32(yoyo_center[1] * self.dis_per_pixel)
+            #print("distance from the top: " + str(yoyo_z_dis))
+
+            self.pos_pub.publish(yoyo_z_dis)
+
+        # cv2.imshow('img', frame)
+        # key = cv2.waitKey(1)
+    
+
+def main():
+    rospy.init_node('tracking')
+    r = rospy.Rate(500)
+
+    tracking = Tracking()
+
+    tracking.get_pixel_distance(tracking.get_tag(1), tracking.get_tag(2))
+
+
+    while not rospy.is_shutdown():
+
+        tracking.measure()
+        r.sleep()
+
+
+if __name__ == '__main__':
+    main()

@@ -11,7 +11,7 @@ import intera_interface
 import intera_control
 from intera_interface import CHECK_VERSION
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Float32
 from std_srvs.srv import Empty, EmptyResponse
 import pygame
 
@@ -31,6 +31,9 @@ class SawyerMove:
     def __init__(self) -> None:
         self.joint_state_sub = rospy.Subscriber('/robot/joint_states', JointState, self.jss_callback)
         self.joint_action_pub = rospy.Publisher('/robot/limb/right/joint_command', JointCommand, queue_size=10)
+        self.ee_z_vel_pub = rospy.Publisher('ee_z_vel', Float32, queue_size=10)
+        self.ee_z_pos_pub = rospy.Publisher('ee_z_pos', Float32, queue_size=10)
+        self.ee_z_pos = 0.0
         #self.start_srv = rospy.Service("start", Empty, self.start_callback)
         self.curr_joint_pos = np.zeros(9)
         self.joint_names = []
@@ -120,12 +123,12 @@ class SawyerMove:
             # print(" ")
             
 
-
+            self.ee_z_pos = frame.p[2]
             if frame.p[2] > 0.75:
-                self.vel_mag = -0.22
+                self.vel_mag = -0.22#-0.22
             
             if frame.p[2] < 0.60:
-                self.vel_mag = 0.22
+                self.vel_mag = 0.22#0.22
 
 
             if abs(frame.p[2] - 0.587) < 1e-2 and self.adjust == 0:
@@ -195,6 +198,7 @@ class SawyerMove:
 
         
         self.joint_action_pub.publish(jc)
+        
 
 
 
@@ -239,6 +243,8 @@ class SawyerMove:
                 jc.velocity = joint_vel_val
                 self.joint_action_pub.publish(jc)   
 
+                
+
             else:
                 print("adjustment")
 
@@ -250,6 +256,10 @@ class SawyerMove:
 
 
                 self.adjust = 2
+
+
+            self.ee_z_vel_pub.publish(Float32(self.vel_mag))
+            self.ee_z_pos_pub.publish(Float32(self.ee_z_pos))
 
 
 
@@ -275,11 +285,13 @@ def main():
     gripper = None
     gripper = intera_interface.Gripper(valid_limbs[0] + '_gripper')
     gripper.set_cmd_velocity(gripper.MAX_VELOCITY)
-    close_pos = 0.016
+    gripper.set_position(0.010)
+    close_pos = 0.0185
     open_pos = 0.10
     gripper.set_position(close_pos)
 
-
+#0.371, #0.158
+#0.5cm
 
 
     #task_init(valid_limbs[0])
@@ -306,19 +318,19 @@ def main():
                         sm.vel_mag = 0.2
 
             keys_pressed = pygame.key.get_pressed()
-            if keys_pressed[pygame.K_w]:
-                print("move up")
+            # if keys_pressed[pygame.K_w]:
+            #     print("move up")
 
-                #sm.move_up(jac_f)
-                sm.vel_mag += 0.2
-            if keys_pressed[pygame.K_s]:
-                print("move_down")
-                sm.vel_mag -= 0.2
+            #     #sm.move_up(jac_f)
+            #     sm.vel_mag += 0.2
+            # if keys_pressed[pygame.K_s]:
+            #     print("move_down")
+            #     sm.vel_mag -= 0.2
                 
-                #sm.move_down(jac_f)
+            #     #sm.move_down(jac_f)
 
-            if keys_pressed[pygame.K_e]:
-                sm.vel_mag = -sm.vel_mag
+            # if keys_pressed[pygame.K_e]:
+            #     sm.vel_mag = -sm.vel_mag
 
             if keys_pressed[pygame.K_z]:
                 sm.vel_mag = 0.0

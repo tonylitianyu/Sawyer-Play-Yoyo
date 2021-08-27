@@ -13,5 +13,8 @@
     <node name="sawyer" pkg="sawyer_move" type="sawyer_jac_move" output="screen" cwd="node" >
       <remap from="joint_states" to="robot/joint_states"/> 
     </node>
-
+    
+    
+    <node name="tracking" pkg="sawyer_move" type="tracking" output="screen" cwd="node" />
+    <node name="collect_data" pkg="sawyer_move" type="collect_data" output="screen" cwd="node" />
 </launch>
