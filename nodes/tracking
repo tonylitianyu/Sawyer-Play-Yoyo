@@ -37,6 +37,7 @@ class Tracking:
         #print("[INFO] {} total AprilTags detected".format(len(results)))
         # loop over the AprilTag detection results
 
+
         yoyo_center = []
         for i in range(len(results)):
             r = results[i]
@@ -62,9 +63,15 @@ class Tracking:
                 #yoyo_center.append((cX,cY))
                 #print(cX,cY)
                 yoyo_center = [cX, cY]
+
             cv2.putText(gray_img, tagID, (ptA[0], ptA[1] - 15),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             #print("[INFO] tag family: {}".format(tagFamily))
+
+
+
+
+
 
         return yoyo_center
 

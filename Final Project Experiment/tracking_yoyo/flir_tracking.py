@@ -14,7 +14,7 @@ def apriltag_detection(gray_img):
     results = detector.detect(gray_img)
     #print("[INFO] {} total AprilTags detected".format(len(results)))
     # loop over the AprilTag detection results
-
+    yoyo_visible = False
     yoyo_center = []
     for r in results:
         # extract the bounding box (x, y)-coordinates for the AprilTag
@@ -39,11 +39,15 @@ def apriltag_detection(gray_img):
             #yoyo_center.append((cX,cY))
             #print(cX,cY)
             yoyo_center = [str(cX), str(cY)]
+
+        if r.tag_id == 0:
+            yoyo_visible = True
         cv2.putText(gray_img, tagID, (ptA[0], ptA[1] - 15),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         #print("[INFO] tag family: {}".format(tagFamily))
 
-    return yoyo_center
+
+    return yoyo_center, yoyo_visible
 
 
 
@@ -65,12 +69,15 @@ file = open("yoyo_pos.txt","w")
 while True:
     ret, frame = cap.read()
 
+    # frame.setflags(write=1)
+    # frame[0:500, 350:520] = np.array(np.fliplr(frame[0:500, 350:520]))
     frame.setflags(write=1)
-    frame[0:450, 50:200] = np.array(np.fliplr(frame[0:450, 50:200]))
-    
 
-    yoyo_center = apriltag_detection(frame)
 
+    yoyo_center, yoyo_visible = apriltag_detection(frame)
+    if yoyo_visible == False:
+        frame = np.array(np.fliplr(frame[0:500, 300:450]))
+        mirror_yoyo_center, mirror_yoyo_visible = apriltag_detection(frame)
 
     # delim = ", "
     # if len(yoyo_center) == 0:
