@@ -1,6 +1,34 @@
 import cv2
 import numpy as np
 import glob
+from PIL import Image
+import keyboard
+import EasyPySpin
+
+def take_img():
+    cap = EasyPySpin.VideoCapture(0)
+
+    cap.set(cv2.CAP_PROP_FPS, 100)
+    fps  = cap.get_pyspin_value("AcquisitionFrameRate")
+    print('fps ' + str(fps))
+
+    width  = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    print("image width: " + str(width))
+    height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    print("image height: " + str(height))
+
+    ret, frame = cap.read()
+    while True:
+        try:
+            if keyboard.is_pressed('k'):
+                print("took a picture")
+                im = Image.fromarray(frame)
+                im.save("grids/"+str(iter)+".png")
+        
+        except:
+            break
+
+    cap.release()
 
 
 def calibrate_chessboard(dir_path, image_format, square_size, width, height):
@@ -50,20 +78,32 @@ def save_coefficients(mtx, dist, path):
     # note you *release* you don't close() a FileStorage object
     cv_file.release()
 
+
+
+
+
+
+
+
+
+
 # Parameters
 IMAGES_DIR = 'grids'
-IMAGES_FORMAT = '.raw'
+IMAGES_FORMAT = '.png'
 SQUARE_SIZE = 1.65
 WIDTH = 7
 HEIGHT = 9
 
-# Calibrate 
-ret, mtx, dist, rvecs, tvecs = calibrate_chessboard(
-    IMAGES_DIR, 
-    IMAGES_FORMAT, 
-    SQUARE_SIZE, 
-    WIDTH, 
-    HEIGHT
-)
-# Save coefficients into a file
-save_coefficients(mtx, dist, "calibration_chessboard.yml")
+
+
+
+# # Calibrate 
+# ret, mtx, dist, rvecs, tvecs = calibrate_chessboard(
+#     IMAGES_DIR, 
+#     IMAGES_FORMAT, 
+#     SQUARE_SIZE, 
+#     WIDTH, 
+#     HEIGHT
+# )
+# # Save coefficients into a file
+# save_coefficients(mtx, dist, "calibration_chessboard.yml")
