@@ -5,6 +5,8 @@ import apriltag
 from PIL import Image
 import time
 
+from numpy.lib.npyio import load
+
 print("[INFO] detecting AprilTags...")
 options = apriltag.DetectorOptions(families="tag36h11")
 detector = apriltag.Detector(options)
@@ -49,7 +51,19 @@ def apriltag_detection(gray_img):
 
     return yoyo_center, yoyo_visible
 
+def load_coefficients():
+    '''Loads camera matrix and distortion coefficients.'''
+    # FILE_STORAGE_READ
+    cv_file = cv2.FileStorage('calibration_chessboard.yml', cv2.FILE_STORAGE_READ)
 
+    # note we also have to specify the type to retrieve other wise we only get a
+    # FileNode object back instead of a matrix
+    camera_matrix = cv_file.getNode('K').mat()
+    dist_matrix = cv_file.getNode('D').mat()
+
+    cv_file.release()
+
+    return camera_matrix, dist_matrix
 
 cap = EasyPySpin.VideoCapture(0)
 
@@ -63,8 +77,12 @@ height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 print("image height: " + str(height))
 
 
+mtx, dist = load_coefficients()
+newcamera, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (width, height), 0)
+mapx, mapy = cv2.initUndistortRectifyMap(mtx, dist, None, newcamera, (width, height), 5)
+
 iter = 0
-file = open("yoyo_pos.txt","w")
+#file = open("yoyo_pos.txt","w")
 #start = time.time()
 while True:
     ret, frame = cap.read()
@@ -72,12 +90,14 @@ while True:
     # frame.setflags(write=1)
     # frame[0:500, 350:520] = np.array(np.fliplr(frame[0:500, 350:520]))
     frame.setflags(write=1)
+    
 
+    frame = cv2.remap(frame, mapx, mapy, cv2.INTER_LINEAR)
 
     yoyo_center, yoyo_visible = apriltag_detection(frame)
-    if yoyo_visible == False:
-        frame = np.array(np.fliplr(frame[0:500, 300:450]))
-        mirror_yoyo_center, mirror_yoyo_visible = apriltag_detection(frame)
+    # if yoyo_visible == False:
+    #     frame = np.array(np.fliplr(frame[0:500, 370:540]))
+    #     mirror_yoyo_center, mirror_yoyo_visible = apriltag_detection(frame)
 
     # delim = ", "
     # if len(yoyo_center) == 0:

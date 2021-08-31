@@ -30,7 +30,21 @@ class Tracking:
         height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
         print("image height: " + str(height))
 
+    #     self.load_coefficients()
 
+        
+    # def load_coefficients(self):
+    #     '''Loads camera matrix and distortion coefficients.'''
+    #     # FILE_STORAGE_READ
+    #     cv_file = cv2.FileStorage('../Final Project Experiment/tracking_yoyo', cv2.FILE_STORAGE_READ)
+
+    #     # note we also have to specify the type to retrieve other wise we only get a
+    #     # FileNode object back instead of a matrix
+    #     camera_matrix = cv_file.getNode('K').mat()
+    #     dist_matrix = cv_file.getNode('D').mat()
+
+    #     cv_file.release()
+    #     return [camera_matrix, dist_matrix]
 
     def apriltag_detection(self, gray_img, id):
         results = self.detector.detect(gray_img)

@@ -17,15 +17,17 @@ def take_img():
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     print("image height: " + str(height))
 
-    ret, frame = cap.read()
+    
+    iter = 0
     while True:
-        try:
-            if keyboard.is_pressed('k'):
-                print("took a picture")
-                im = Image.fromarray(frame)
-                im.save("grids/"+str(iter)+".png")
-        
-        except:
+        if keyboard.is_pressed('k'):
+            ret, frame = cap.read()
+            frame.setflags(write=1)
+            print("took a picture")
+            im = Image.fromarray(frame)
+            iter += 1
+            im.save("grids/"+str(iter)+".png")
+        if keyboard.is_pressed('q'):
             break
 
     cap.release()
@@ -46,7 +48,7 @@ def calibrate_chessboard(dir_path, image_format, square_size, width, height):
     objpoints = []  # 3d point in real world space
     imgpoints = []  # 2d points in image plane.
 
-    images = glob.glob('grids/*.raw')
+    images = glob.glob('grids/*.png')
 
     print(images)
     # Iterate through all images
@@ -59,7 +61,9 @@ def calibrate_chessboard(dir_path, image_format, square_size, width, height):
         ret, corners = cv2.findChessboardCorners(gray, (width, height), None)
 
         # If found, add object points, image points (after refining them)
+        print(ret)
         if ret:
+            
             objpoints.append(objp)
 
             corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
@@ -79,31 +83,43 @@ def save_coefficients(mtx, dist, path):
     cv_file.release()
 
 
+def load_coefficients():
+    '''Loads camera matrix and distortion coefficients.'''
+    # FILE_STORAGE_READ
+    cv_file = cv2.FileStorage('calibration_chessboard.yml', cv2.FILE_STORAGE_READ)
+
+    # note we also have to specify the type to retrieve other wise we only get a
+    # FileNode object back instead of a matrix
+    camera_matrix = cv_file.getNode('K').mat()
+    dist_matrix = cv_file.getNode('D').mat()
+
+    cv_file.release()
+
+    return camera_matrix, dist_matrix
 
 
 
 
-
-
+take_img()
 
 
 # Parameters
 IMAGES_DIR = 'grids'
 IMAGES_FORMAT = '.png'
-SQUARE_SIZE = 1.65
-WIDTH = 7
-HEIGHT = 9
+SQUARE_SIZE = 1.65/100
+WIDTH = 8
+HEIGHT = 6
 
 
 
 
 # # Calibrate 
-# ret, mtx, dist, rvecs, tvecs = calibrate_chessboard(
-#     IMAGES_DIR, 
-#     IMAGES_FORMAT, 
-#     SQUARE_SIZE, 
-#     WIDTH, 
-#     HEIGHT
-# )
+ret, mtx, dist, rvecs, tvecs = calibrate_chessboard(
+    IMAGES_DIR, 
+    IMAGES_FORMAT, 
+    SQUARE_SIZE, 
+    WIDTH, 
+    HEIGHT
+)
 # # Save coefficients into a file
-# save_coefficients(mtx, dist, "calibration_chessboard.yml")
+save_coefficients(mtx, dist, "calibration_chessboard.yml")
