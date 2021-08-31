@@ -8,7 +8,7 @@ import time
 from numpy.lib.npyio import load
 
 print("[INFO] detecting AprilTags...")
-options = apriltag.DetectorOptions(families="tag36h11")
+options = apriltag.DetectorOptions(families="tag36h11") #tag25h9
 detector = apriltag.Detector(options)
 
 
