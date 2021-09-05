@@ -8,6 +8,7 @@ import time as time
 class Collect:
     def __init__(self) -> None:
         self.yoyo_pos_sub = rospy.Subscriber('yoyo_pos', Float32, self.pos_callback)
+        self.yoyo_rot_sub = rospy.Subscriber('yoyo_rot', Float32, self.rot_callback)
         self.ee_z_vel_sub = rospy.Subscriber('ee_z_vel', Float32, self.ee_z_vel_callback)
         self.ee_z_pos_sub = rospy.Subscriber('ee_z_pos', Float32, self.ee_z_pos_callback)
 
@@ -15,6 +16,7 @@ class Collect:
         self.file = open("../data/"+date_time+".txt", "w+")
 
         self.curr_yoyo_pos = 0.0
+        self.curr_yoyo_rot = 0.0
         self.ee_z_vel = 0.0
         self.ee_z_pos = 0.0
         
@@ -23,6 +25,10 @@ class Collect:
     def pos_callback(self, data):
         self.curr_yoyo_pos = data.data
 
+    def rot_callback(self, data):
+        self.curr_yoyo_rot = data.data
+
+
     def ee_z_vel_callback(self, data):
         self.ee_z_vel = data.data
     
@@ -30,7 +36,7 @@ class Collect:
         self.ee_z_pos = data.data
 
     def write_data_to_file(self):
-        single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.ee_z_pos), str(self.ee_z_vel)]
+        single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.curr_yoyo_rot), str(self.ee_z_pos), str(self.ee_z_vel)]
 
         delim = ", "
         self.file.write(delim.join(single_line) + "\n")

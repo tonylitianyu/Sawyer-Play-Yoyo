@@ -13,11 +13,15 @@ import time
 class Tracking:
     def __init__(self):
         self.pos_pub = rospy.Publisher('yoyo_pos', Float32, queue_size=10)
+        self.rot_pub = rospy.Publisher('yoyo_rot', Float32, queue_size=10)
         self.dis_per_pixel = 0.0
+        self.mirr_dis_per_pixel = 0.0
+
+        self.last_rot = 0.0
 
         #Initializing april tags
         print("[INFO] detecting AprilTags...")
-        self.options = apriltag.DetectorOptions(families="tag36h11")
+        self.options = apriltag.DetectorOptions(families="tag25h9", nthreads=8, quad_decimate=1)
         self.detector = apriltag.Detector(self.options)
 
         #Initializing camera
@@ -53,6 +57,8 @@ class Tracking:
 
 
         yoyo_center = []
+        yoyo_visible = False
+        yoyo_rotation = self.last_rot
         for i in range(len(results)):
             r = results[i]
             # extract the bounding box (x, y)-coordinates for the AprilTag
@@ -78,6 +84,11 @@ class Tracking:
                 #print(cX,cY)
                 yoyo_center = [cX, cY]
 
+                if r.tag_id == 0:
+                    yoyo_visible = True
+                    pos_results, _, _ = self.detector.detection_pose(r, camera_params=np.array([729.78671005,731.29832261,362.9618687,268.38005998]), tag_size=0.053)
+                    yoyo_rotation = np.arctan2(pos_results[1][0], pos_results[0][0])
+
             cv2.putText(gray_img, tagID, (ptA[0], ptA[1] - 15),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             #print("[INFO] tag family: {}".format(tagFamily))
@@ -87,10 +98,13 @@ class Tracking:
 
 
 
-        return yoyo_center
+        return yoyo_center, yoyo_visible, yoyo_rotation
 
-    def get_tag(self, id):
+    def get_tag(self, id, mirror=False):
         ret, frame = self.cap.read()
+        if mirror:
+            frame = np.array(np.fliplr(frame[50:500, 370:540]))
+
         tags_center = self.apriltag_detection(frame, id) #two tags are 0.2m away vertically
 
         return tags_center
@@ -98,21 +112,34 @@ class Tracking:
     def get_pixel_distance(self, tag_1_center, tag_2_center):
         pixel_diff = tag_2_center[1] - tag_1_center[1] #tag2 - tag1
         dis_diff = 0.2 #meter
-        self.dis_per_pixel = dis_diff/pixel_diff #meter
-        print(self.dis_per_pixel)
-
-
+        return dis_diff/pixel_diff #meter
+        
 
     def measure(self):
 
         ret, frame = self.cap.read()
-        yoyo_center = self.apriltag_detection(frame, 0)
+        yoyo_center, yoyo_visible, yoyo_rotation = self.apriltag_detection(frame, 0)
+
+        if yoyo_visible == False:
+            frame = np.array(np.fliplr(frame[50:500, 370:540]))
+            mirror_yoyo_center, _, mirror_yoyo_rotation = self.apriltag_detection(frame, 0)
+            yoyo_center = mirror_yoyo_center
+            yoyo_rotation = mirror_yoyo_rotation
 
         if len(yoyo_center) != 0:
-            yoyo_z_dis = Float32(yoyo_center[1] * self.dis_per_pixel)
+            if yoyo_visible == False:
+                yoyo_z_dis = Float32(yoyo_center[1] * self.mirr_dis_per_pixel - 0.01)
+                
+            else:
+                yoyo_z_dis = Float32(yoyo_center[1] * self.dis_per_pixel)
+            
             #print("distance from the top: " + str(yoyo_z_dis))
 
             self.pos_pub.publish(yoyo_z_dis)
+
+
+            self.rot_pub.publish(Float32(yoyo_rotation))
+            self.last_rot = yoyo_rotation
 
         # cv2.imshow('img', frame)
         # key = cv2.waitKey(1)
@@ -124,7 +151,16 @@ def main():
 
     tracking = Tracking()
 
-    tracking.get_pixel_distance(tracking.get_tag(1), tracking.get_tag(2))
+
+    # #calibrate
+    # tracking.dis_per_pixel = tracking.get_pixel_distance(tracking.get_tag(1)[0], tracking.get_tag(2)[0])
+    # print(tracking.dis_per_pixel)
+
+    # tracking.mirr_dis_per_pixel = tracking.get_pixel_distance(tracking.get_tag(1, True)[0], tracking.get_tag(2, True)[0])
+    # print(tracking.mirr_dis_per_pixel)
+
+    tracking.dis_per_pixel = 0.002127659574468085
+    tracking.mirr_dis_per_pixel = 0.002702702702702703
 
 
     while not rospy.is_shutdown():

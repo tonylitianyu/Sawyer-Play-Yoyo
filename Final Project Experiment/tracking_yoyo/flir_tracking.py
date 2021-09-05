@@ -8,12 +8,13 @@ import time
 from numpy.lib.npyio import load
 
 print("[INFO] detecting AprilTags...")
-options = apriltag.DetectorOptions(families="tag36h11") #tag25h9
+options = apriltag.DetectorOptions(families="tag25h9", nthreads=8, quad_decimate=1) #tag25h9#tag36h11
 detector = apriltag.Detector(options)
 
 
 def apriltag_detection(gray_img):
     results = detector.detect(gray_img)
+    
     #print("[INFO] {} total AprilTags detected".format(len(results)))
     # loop over the AprilTag detection results
     yoyo_visible = False
@@ -44,6 +45,8 @@ def apriltag_detection(gray_img):
 
         if r.tag_id == 0:
             yoyo_visible = True
+            pos_results, _, _ = detector.detection_pose(r, camera_params=np.array([729.78671005,731.29832261,362.9618687,268.38005998]), tag_size=0.053)
+            print(np.arctan2(pos_results[1][0], pos_results[0][0]))
         cv2.putText(gray_img, tagID, (ptA[0], ptA[1] - 15),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         #print("[INFO] tag family: {}".format(tagFamily))
@@ -78,6 +81,7 @@ print("image height: " + str(height))
 
 
 mtx, dist = load_coefficients()
+print(mtx)
 newcamera, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (width, height), 0)
 mapx, mapy = cv2.initUndistortRectifyMap(mtx, dist, None, newcamera, (width, height), 5)
 
@@ -94,10 +98,10 @@ while True:
 
     frame = cv2.remap(frame, mapx, mapy, cv2.INTER_LINEAR)
 
-    yoyo_center, yoyo_visible = apriltag_detection(frame)
-    # if yoyo_visible == False:
-    #     frame = np.array(np.fliplr(frame[0:500, 370:540]))
-    #     mirror_yoyo_center, mirror_yoyo_visible = apriltag_detection(frame)
+    #yoyo_center, yoyo_visible = apriltag_detection(frame)
+    #if yoyo_visible == False:
+    mirr_frame = np.array(np.fliplr(frame[50:500, 370:540]))
+    mirror_yoyo_center, mirror_yoyo_visible = apriltag_detection(mirr_frame)
 
     # delim = ", "
     # if len(yoyo_center) == 0:
@@ -106,7 +110,7 @@ while True:
     # file.write(delim.join(yoyo_center) + "\n")
     #print(yoyo_center)
 
-    cv2.imshow('img', frame)
+    cv2.imshow('img', mirr_frame)
     key = cv2.waitKey(30)
     if key == ord("q"):
         break

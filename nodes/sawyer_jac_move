@@ -286,7 +286,7 @@ def main():
     gripper = intera_interface.Gripper(valid_limbs[0] + '_gripper')
     gripper.set_cmd_velocity(gripper.MAX_VELOCITY)
     gripper.set_position(0.010)
-    close_pos = 0.0185
+    close_pos = 0.025
     open_pos = 0.10
     gripper.set_position(close_pos)
 

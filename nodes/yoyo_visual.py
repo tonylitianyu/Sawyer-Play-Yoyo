@@ -22,25 +22,27 @@ line_list = np.array(line_list)
 #print(line_list)
 
 
-fig, axs = plt.subplots(3)
+fig, axs = plt.subplots(4)
 
 t_step = line_list[:,0]
 z_pos = line_list[:,1]
-ee_pos = line_list[:,2]
-vel_input = line_list[:,3]
+rot = line_list[:,2]
+ee_pos = line_list[:,3]
+vel_input = line_list[:,4]
 
 axs[0].plot(t_step, z_pos)
 axs[0].set_ylim([0.0,1.0])
 axs[0].invert_yaxis()
 axs[0].set_title('yoyo z pos')
 
+axs[1].plot(t_step, rot)
+axs[1].set_title('yoyo rotation')
 
-axs[1].plot(t_step, ee_pos)
-axs[1].plot([0.5, 1.0])
-axs[1].set_title('ee z pos')
+axs[2].plot(t_step, ee_pos)
+axs[2].set_title('ee z pos')
 
-axs[2].plot(t_step, vel_input)
-axs[2].set_title('input velocity')
+axs[3].plot(t_step, vel_input)
+axs[3].set_title('input velocity')
 
 
 plt.show()
