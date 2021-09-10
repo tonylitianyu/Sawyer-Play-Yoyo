@@ -35,7 +35,7 @@ for line in file:
 
 line_list = np.array(line_list)
 #print(line_list)
-line_list = line_list[3190:, :]
+line_list = line_list[:, :]
 
 fig, axs = plt.subplots(6)
 
@@ -52,7 +52,7 @@ for z in range(1, len(z_vel) - 1):
         z_vel[z] = z_vel[z-1]#(z_vel[z-1] + z_vel[z+1])/2
 
 
-# z_vel = smooth_with_moving_average(z_vel, 5)
+z_vel = smooth_with_moving_average(z_vel, 5)
 
 
 
