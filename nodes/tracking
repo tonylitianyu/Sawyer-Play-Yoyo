@@ -13,6 +13,7 @@ import time
 class Tracking:
     def __init__(self):
         self.pos_pub = rospy.Publisher('yoyo_pos', Float32, queue_size=10)
+        self.vel_pub = rospy.Publisher('yoyo_vel', Float32, queue_size=10)
         self.rot_pub = rospy.Publisher('yoyo_rot', Float32, queue_size=10)
         self.dis_per_pixel = 0.0
         self.mirr_dis_per_pixel = 0.0
@@ -33,6 +34,10 @@ class Tracking:
         print("image width: " + str(width))
         height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
         print("image height: " + str(height))
+
+
+        self.last_yoyo_z_dis = 0.0
+        self.last_yoyo_pos_time = time.time()
 
     #     self.load_coefficients()
 
@@ -95,9 +100,6 @@ class Tracking:
 
 
 
-
-
-
         return yoyo_center, yoyo_visible, yoyo_rotation
 
     def get_tag(self, id, mirror=False):
@@ -116,7 +118,7 @@ class Tracking:
         
 
     def measure(self):
-
+        
         ret, frame = self.cap.read()
         yoyo_center, yoyo_visible, yoyo_rotation = self.apriltag_detection(frame, 0)
 
@@ -128,18 +130,20 @@ class Tracking:
 
         if len(yoyo_center) != 0:
             if yoyo_visible == False:
-                yoyo_z_dis = Float32(yoyo_center[1] * self.mirr_dis_per_pixel - 0.01)
+                yoyo_z_dis = yoyo_center[1] * self.mirr_dis_per_pixel - 0.01
                 
             else:
-                yoyo_z_dis = Float32(yoyo_center[1] * self.dis_per_pixel)
+                yoyo_z_dis = yoyo_center[1] * self.dis_per_pixel
             
             #print("distance from the top: " + str(yoyo_z_dis))
 
-            self.pos_pub.publish(yoyo_z_dis)
-
-
+            self.pos_pub.publish(Float32(yoyo_z_dis))
+            curr_time = time.time()
+            self.vel_pub.publish((yoyo_z_dis - self.last_yoyo_z_dis)/(curr_time - self.last_yoyo_pos_time))
             self.rot_pub.publish(Float32(yoyo_rotation))
             self.last_rot = yoyo_rotation
+            self.last_yoyo_z_dis = yoyo_z_dis
+            self.last_yoyo_pos_time = curr_time
 
         # cv2.imshow('img', frame)
         # key = cv2.waitKey(1)

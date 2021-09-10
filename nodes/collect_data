@@ -16,17 +16,35 @@ class Collect:
         self.file = open("../data/"+date_time+".txt", "w+")
 
         self.curr_yoyo_pos = 0.0
+        self.last_yoyo_pos = 0.0
+        self.curr_yoyo_pos_vel = 0.0
+        
+
         self.curr_yoyo_rot = 0.0
+        self.last_yoyo_rot = 0.0
+        self.curr_yoyo_rot_vel = 0.0
+        
+
         self.ee_z_vel = 0.0
         self.ee_z_pos = 0.0
         
         self.t_0 = time.time()
+        self.last_yoyo_pos_time = self.t_0
+        self.last_yoyo_rot_time = self.t_0
 
     def pos_callback(self, data):
+        curr_time = time.time() 
         self.curr_yoyo_pos = data.data
+        self.curr_yoyo_pos_vel = (self.curr_yoyo_pos - self.last_yoyo_pos)/(curr_time - self.last_yoyo_pos_time)
+        self.last_yoyo_pos = self.curr_yoyo_pos
+        self.last_yoyo_pos_time = curr_time
 
     def rot_callback(self, data):
+        curr_time = time.time()
         self.curr_yoyo_rot = data.data
+        self.curr_yoyo_rot_vel = (self.curr_yoyo_rot - self.last_yoyo_rot)/(curr_time - self.last_yoyo_rot_time)
+        self.last_yoyo_rot = self.curr_yoyo_rot
+        self.last_yoyo_rot_time = curr_time
 
 
     def ee_z_vel_callback(self, data):
@@ -36,7 +54,7 @@ class Collect:
         self.ee_z_pos = data.data
 
     def write_data_to_file(self):
-        single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.curr_yoyo_rot), str(self.ee_z_pos), str(self.ee_z_vel)]
+        single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.curr_yoyo_pos_vel), str(self.curr_yoyo_rot), str(self.curr_yoyo_rot_vel), str(self.ee_z_pos), str(self.ee_z_vel)]
 
         delim = ", "
         self.file.write(delim.join(single_line) + "\n")

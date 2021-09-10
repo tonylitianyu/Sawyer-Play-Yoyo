@@ -21,6 +21,8 @@ from sympy import symbols, Eq, solve, init_printing, simplify, Function, Matrix
 import PyKDL as kdl
 import kdl_parser_py.urdf as kdl_parser
 
+import time
+
 # import intera_interface
 # import intera_external_devices
 
@@ -29,6 +31,10 @@ import kdl_parser_py.urdf as kdl_parser
 class SawyerMove:
 
     def __init__(self) -> None:
+        self.yoyo_vel_sub = rospy.Subscriber('yoyo_vel', Float32, self.vel_callback)
+        self.last_yoyo_vel = 0.0
+        self.yoyo_vel = 0.0
+        
         self.joint_state_sub = rospy.Subscriber('/robot/joint_states', JointState, self.jss_callback)
         self.joint_action_pub = rospy.Publisher('/robot/limb/right/joint_command', JointCommand, queue_size=10)
         self.ee_z_vel_pub = rospy.Publisher('ee_z_vel', Float32, queue_size=10)
@@ -39,7 +45,7 @@ class SawyerMove:
         self.joint_names = []
 
 
-
+        self.timer = time.time()
         self.move_mag = 1.0
         self.vel_mag = 0.0
         self.yc = 0.4
@@ -78,28 +84,19 @@ class SawyerMove:
 
 
 
-
-
-    def height_to_joints(self, height):
-        #two links IK
-        #wrist max_height = 0.4
-
-        L1 = 0.4
-        L4 = (126.5 + 273.5)/1000
-
-        h_sq = (self.xc**2) + (height**2)
-        b = np.arccos((h_sq - (L1**2) - (L4**2))/ (2*L1*L4))
-        a = -(np.arccos((L4**2 - h_sq - L1**2)/(-2*np.sqrt(h_sq)*L1)) + np.arctan2(height,self.xc))
-        c = (-a) + np.deg2rad(90) - b
-
-        return b, a, c
-
     def kdl_to_mat(self, m):
         mat =  np.mat(np.zeros((m.rows(), m.columns())))
         for i in range(m.rows()):
             for j in range(m.columns()):
                 mat[i,j] = m[i,j]
         return np.array(mat)
+
+
+    def vel_callback(self, data):
+        self.last_yoyo_vel = self.yoyo_vel
+        self.yoyo_vel = data.data
+        if abs(self.yoyo_vel - self.last_yoyo_vel) > 2.0:
+            self.yoyo_vel = self.last_yoyo_vel
 
     def jss_callback(self, data):
         self.curr_joint_pos = data.position
@@ -124,11 +121,25 @@ class SawyerMove:
             
 
             self.ee_z_pos = frame.p[2]
-            if frame.p[2] > 0.75:
-                self.vel_mag = -0.22#-0.22
+            # if frame.p[2] > 0.75:
+            #     self.vel_mag = -0.25#-0.22
             
-            if frame.p[2] < 0.60:
-                self.vel_mag = 0.22#0.22
+            # if frame.p[2] < 0.60:
+            #     self.vel_mag = 0.25#0.22
+
+            # if yoyo vel > 0, ee_z_pos increase positive
+            if self.yoyo_vel > 0:
+                
+                if abs(frame.p[2] - 0.80) > 0.01:
+                    self.vel_mag = 0.25
+                else:
+                    self.vel_mag = 0.0
+            # if yoyo vel < 0, ee_z_pos decrease 
+            if self.yoyo_vel < 0:
+                if abs(frame.p[2] - 0.60) > 0.01:
+                    self.vel_mag = -0.25
+                else:
+                    self.vel_mag = 0.0
 
 
             if abs(frame.p[2] - 0.587) < 1e-2 and self.adjust == 0:
@@ -286,7 +297,7 @@ def main():
     gripper = intera_interface.Gripper(valid_limbs[0] + '_gripper')
     gripper.set_cmd_velocity(gripper.MAX_VELOCITY)
     gripper.set_position(0.010)
-    close_pos = 0.025
+    close_pos = 0.023
     open_pos = 0.10
     gripper.set_position(close_pos)
 
@@ -313,7 +324,7 @@ def main():
                     if event.key == pygame.K_q:
                         sm.start_flag = True
                         gripper.open()
-                        rospy.sleep(0.5)
+                        rospy.sleep(0.3)
                         gripper.close()
                         sm.vel_mag = 0.2
 
