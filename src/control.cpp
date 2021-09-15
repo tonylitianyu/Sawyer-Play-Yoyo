@@ -2,23 +2,30 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 
+using namespace Eigen;
 
 class Controller
 {
     private:
-        VectorXd Q_v(4);
-        VectorXd R_v(1);
+        ros::Timer timer;
+        VectorXd Q;
+        VectorXd R;
+        MatrixXd kht;
         float dt;
+        int horizon;
+
+        VectorXd u;
+
 
     public:
-        Controller::Controller(ros::NodeHandle nh, const int horizon, const MatrixXd K_h_T, const MatrixXd Q, const MatrixXd R) : 
+        Controller(ros::NodeHandle nh, const int horizon, const MatrixXd K_h_T, const MatrixXd Q, const MatrixXd R) : 
         timer(nh.createTimer(ros::Duration(0.01), &Controller::main_loop, this)),
         horizon(horizon),
         kht(K_h_T),
         Q(Q),
         R(R)
         {
-            extra_size = 3;
+
             u = VectorXd::Zero(horizon);
         }
 
@@ -27,7 +34,7 @@ class Controller
 
         }
 
-}
+};
 
 
 
@@ -49,7 +56,7 @@ int main(int argc, char **argv)
 
     
 
-    Controller controller = controller::Controller(50, Q, Q, R, 0.02);
+    Controller controller = Controller(n, 50, Q, Q, R);
     ros::spin();
 
 

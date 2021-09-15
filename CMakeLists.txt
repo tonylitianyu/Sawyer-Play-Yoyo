@@ -10,7 +10,11 @@ project(sawyer_move)
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     std_msgs
+    cmake_modules
 )
+
+find_package(Eigen REQUIRED)
+
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -104,8 +108,8 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES sawyer_move
-   CATKIN_DEPENDS ros_cpp std_msgs
-#  DEPENDS system_lib
+   CATKIN_DEPENDS roscpp std_msgs
+   DEPENDS Eigen
 )
 
 ###########
@@ -117,6 +121,7 @@ catkin_package(
 include_directories(
 # include
     ${catkin_INCLUDE_DIRS}
+    ${Eigen_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
