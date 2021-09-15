@@ -17,16 +17,31 @@ def partition1(max_range, S):
 poly_basis = partition1(np.array([0,1,2,3]), 3)
 print(poly_basis)
 
+
+
+
 # Koopman set up
 def basis(state, action):
     #extra_basis = np.array([np.sin(state[0]), np.sin(state[1]),np.sin(state[2]),np.sin(state[3]),np.cos(state[0]), np.cos(state[1]),np.cos(state[2]),np.cos(state[3])])
     extra_basis = np.array([])
+
+    #for k in range(len(state)):
     for p in poly_basis:
         curr_basis = (state[0]**p[0]) * (state[1]**p[1]) * (state[2]**p[2]) * (state[3]**p[3]) * action
         extra_basis = np.append(extra_basis, curr_basis)
 
-    action_basis = np.array([action])
-    psi = np.hstack((state, extra_basis, action_basis))
+    # for k in range(len(state)):
+    #     curr_basis = np.cos(state[k])*action
+    #     extra_basis = np.append(extra_basis, curr_basis)
+
+    # for k in range(len(state)):
+    #     curr_basis = np.sin(state[k])*action
+    #     extra_basis = np.append(extra_basis, curr_basis) 
+ 
+    #extra_basis = np.append(extra_basis, 1.0)
+
+    #action_basis = np.array([action])
+    psi = np.hstack((state, extra_basis))
     return psi
 
 print(basis(np.zeros(4), 0))
@@ -88,8 +103,9 @@ for t in range(1,len(t_step)-1):
 
 
 predict_arr = np.array(predict_arr)
-print(predict_arr.shape)
 
+print("Loss: ")
+loss = 0.0
 fig, axs = plt.subplots(num_state)
 for i in range(num_state):
     if i == 0:
@@ -97,7 +113,9 @@ for i in range(num_state):
         axs[i].invert_yaxis()
     axs[i].plot(range(len(predict_arr)), predict_arr[:,i])
     axs[i].plot(range(len(state_list)), state_list[:,i])
+    loss += np.square(np.subtract(state_list[:,i][:-2], predict_arr[:,i])).mean()
+    
 plt.show()
 
-
+print(loss)
     
