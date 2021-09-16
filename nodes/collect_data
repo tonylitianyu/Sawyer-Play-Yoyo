@@ -4,11 +4,13 @@ import rospy
 import numpy as np
 from std_msgs.msg import Float32
 from datetime import datetime
+from sawyer_move.msg import YoyoState
 import time as time
 class Collect:
     def __init__(self) -> None:
-        self.yoyo_pos_sub = rospy.Subscriber('yoyo_pos', Float32, self.pos_callback)
-        self.yoyo_rot_sub = rospy.Subscriber('yoyo_rot', Float32, self.rot_callback)
+        # self.yoyo_pos_sub = rospy.Subscriber('yoyo_pos', Float32, self.pos_callback)
+        # self.yoyo_rot_sub = rospy.Subscriber('yoyo_rot', Float32, self.rot_callback)
+        self.yoyo_state_sub = rospy.Subscriber('yoyo_state', YoyoState, self.state_callback)
         self.ee_z_vel_sub = rospy.Subscriber('ee_z_vel', Float32, self.ee_z_vel_callback)
         self.ee_z_pos_sub = rospy.Subscriber('ee_z_pos', Float32, self.ee_z_pos_callback)
 
@@ -32,19 +34,27 @@ class Collect:
         self.last_yoyo_pos_time = self.t_0
         self.last_yoyo_rot_time = self.t_0
 
-    def pos_callback(self, data):
-        curr_time = time.time() 
-        self.curr_yoyo_pos = data.data
-        self.curr_yoyo_pos_vel = (self.curr_yoyo_pos - self.last_yoyo_pos)/(curr_time - self.last_yoyo_pos_time)
-        self.last_yoyo_pos = self.curr_yoyo_pos
-        self.last_yoyo_pos_time = curr_time
+    # def pos_callback(self, data):
+    #     curr_time = time.time() 
+    #     self.curr_yoyo_pos = data.data
+    #     self.curr_yoyo_pos_vel = (self.curr_yoyo_pos - self.last_yoyo_pos)/(curr_time - self.last_yoyo_pos_time)
+    #     self.last_yoyo_pos = self.curr_yoyo_pos
+    #     self.last_yoyo_pos_time = curr_time
 
-    def rot_callback(self, data):
-        curr_time = time.time()
-        self.curr_yoyo_rot = data.data
-        self.curr_yoyo_rot_vel = (self.curr_yoyo_rot - self.last_yoyo_rot)/(curr_time - self.last_yoyo_rot_time)
-        self.last_yoyo_rot = self.curr_yoyo_rot
-        self.last_yoyo_rot_time = curr_time
+    # def rot_callback(self, data):
+    #     curr_time = time.time()
+    #     self.curr_yoyo_rot = data.data
+    #     self.curr_yoyo_rot_vel = (self.curr_yoyo_rot - self.last_yoyo_rot)/(curr_time - self.last_yoyo_rot_time)
+    #     self.last_yoyo_rot = self.curr_yoyo_rot
+    #     self.last_yoyo_rot_time = curr_time
+
+
+
+    def state_callback(self, data):
+        self.curr_yoyo_pos = data.yoyo_pos
+        self.curr_yoyo_pos_vel = data.yoyo_posvel
+        self.curr_yoyo_rot = data.yoyo_rot
+        self.curr_yoyo_rot_vel = data.yoyo_rotvel
 
 
     def ee_z_vel_callback(self, data):

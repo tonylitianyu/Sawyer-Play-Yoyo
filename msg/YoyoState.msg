@@ -1,0 +1,4 @@
+float32 yoyo_pos
+float32 yoyo_posvel
+float32 yoyo_rot
+float32 yoyo_rotvel

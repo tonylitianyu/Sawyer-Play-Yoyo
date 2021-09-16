@@ -4,6 +4,7 @@ import rospy
 import numpy as np
 from geometry_msgs.msg import Pose
 from std_msgs.msg import Float32
+from sawyer_move.msg import YoyoState
 import cv2
 import EasyPySpin
 import apriltag
@@ -12,9 +13,12 @@ import time
 
 class Tracking:
     def __init__(self):
-        self.pos_pub = rospy.Publisher('yoyo_pos', Float32, queue_size=10)
-        self.vel_pub = rospy.Publisher('yoyo_vel', Float32, queue_size=10)
-        self.rot_pub = rospy.Publisher('yoyo_rot', Float32, queue_size=10)
+        # self.pos_pub = rospy.Publisher('yoyo_pos', Float32, queue_size=10)
+        # self.vel_pub = rospy.Publisher('yoyo_vel', Float32, queue_size=10)
+        # self.rot_pub = rospy.Publisher('yoyo_rot', Float32, queue_size=10)
+        self.yoyo_state_pub = rospy.Publisher('yoyo_state', YoyoState, queue_size=10)
+
+
         self.dis_per_pixel = 0.0
         self.mirr_dis_per_pixel = 0.0
 
@@ -137,10 +141,24 @@ class Tracking:
             
             #print("distance from the top: " + str(yoyo_z_dis))
 
-            self.pos_pub.publish(Float32(yoyo_z_dis))
+            # self.pos_pub.publish(Float32(yoyo_z_dis))
+            # curr_time = time.time()
+            # self.vel_pub.publish((yoyo_z_dis - self.last_yoyo_z_dis)/(curr_time - self.last_yoyo_pos_time))
+            # self.rot_pub.publish(Float32(yoyo_rotation))
+
             curr_time = time.time()
-            self.vel_pub.publish((yoyo_z_dis - self.last_yoyo_z_dis)/(curr_time - self.last_yoyo_pos_time))
-            self.rot_pub.publish(Float32(yoyo_rotation))
+            yoyo_z_vel = (yoyo_z_dis - self.last_yoyo_z_dis)/(curr_time - self.last_yoyo_pos_time)
+            yoyo_rot_vel = (yoyo_rotation - self.last_rot)/(curr_time - self.last_yoyo_pos_time)
+
+            yoyo_state = YoyoState()
+            yoyo_state.yoyo_pos = yoyo_z_dis
+            yoyo_state.yoyo_posvel = yoyo_z_vel
+            yoyo_state.yoyo_rot = yoyo_rotation
+            yoyo_state.yoyo_rotvel = yoyo_rot_vel
+
+            self.yoyo_state_pub.publish(yoyo_state)
+
+
             self.last_rot = yoyo_rotation
             self.last_yoyo_z_dis = yoyo_z_dis
             self.last_yoyo_pos_time = curr_time

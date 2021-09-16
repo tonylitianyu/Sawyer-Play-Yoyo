@@ -13,6 +13,7 @@ from intera_interface import CHECK_VERSION
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header, Float32
 from std_srvs.srv import Empty, EmptyResponse
+from sawyer_move.msg import YoyoState
 import pygame
 
 import sympy as sp
@@ -54,7 +55,8 @@ class SawyerMove:
 
     def __init__(self) -> None:
         self.start_flag = False
-        self.yoyo_vel_sub = rospy.Subscriber('yoyo_vel', Float32, self.vel_callback)
+        #self.yoyo_vel_sub = rospy.Subscriber('yoyo_vel', Float32, self.vel_callback)
+        self.yoyo_state_sub = rospy.Subscriber('yoyo_state', YoyoState, self.state_callback)
         self.last_yoyo_vels = MovingAverage('yoyo_vel', 5)
         self.yoyo_vel = 0.0
         
@@ -115,11 +117,13 @@ class SawyerMove:
         return np.array(mat)
 
 
-    def vel_callback(self, data):
-        if abs(data.data - self.last_yoyo_vels.get_last()) > 2.0:
+    def state_callback(self, data):
+        temp_vel = data.yoyo_posvel
+        if abs(temp_vel - self.last_yoyo_vels.get_last()) > 2.0:
             self.last_yoyo_vels.add(self.last_yoyo_vels.get_last())
         else:
-            self.last_yoyo_vels.add(data.data)
+            self.last_yoyo_vels.add(temp_vel)
+
         self.yoyo_vel = self.last_yoyo_vels.avg()
 
 
