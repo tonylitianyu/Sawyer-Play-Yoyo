@@ -119,3 +119,5 @@ plt.show()
 
 print(loss)
     
+np.savetxt('../src/kht.csv', np.round(km.get_K_h_T(),5), delimiter=',')
+np.savetxt('../src/koopman.csv', np.round(K,5), delimiter=',')
