@@ -23,7 +23,7 @@ This project utilizes data-driven control to make a Sawyer robot to play yoyo.
 8. Open a new terminal window
 9. cd into yoyo workspace and do ```catkin_make_isolated```
 10. cd into rethink workspace, and ```rm -rf``` the ```build``` and ```devel``` folders
-11. ```catkin_make``` in the rethink workspace
+11. ```catkin_make``` in the rethink workspace and do ```source devel/setup.bash```
 12. cd back to the yoyo workspace, and do ```source devel/setup.bash```
 
 ### Camera Setup
