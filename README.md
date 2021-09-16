@@ -5,6 +5,10 @@ Author: Tianyu Li
 ## Introduction
 This project utilizes data-driven control to make a Sawyer robot to play yoyo.
 
+## Packages
+https://github.com/wuphilipp/sawyer_kdl
+https://github.com/orocos/orocos_kinematics_dynamics
+
 ## Instructions
 
 ### Environment Setup
