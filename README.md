@@ -6,7 +6,7 @@ Author: Tianyu Li
 This project utilizes data-driven control to make a Sawyer robot to play yoyo.
 
 ## Packages
-https://github.com/wuphilipp/sawyer_kdl
+https://github.com/wuphilipp/sawyer_kdl  
 https://github.com/orocos/orocos_kinematics_dynamics
 
 ## Instructions
@@ -25,10 +25,9 @@ https://github.com/orocos/orocos_kinematics_dynamics
 6. Enable the robot ```rosrun intera_interface enable_robot.py -e```
 7. Run the joint_server ```rosrun intera_interface joint_trajectory_action_server.py```
 8. Open a new terminal window
-9. cd into yoyo workspace and do ```catkin_make_isolated```
+9. cd into yoyo workspace and do ```catkin_make``` and ```source devel/setup.bash```
 10. cd into rethink workspace, and ```rm -rf``` the ```build``` and ```devel``` folders
 11. ```catkin_make``` in the rethink workspace and do ```source devel/setup.bash```
-12. cd back to the yoyo workspace, and do ```source devel/setup.bash```
 
 ### Camera Setup
 1. Connect the camera to the computer
