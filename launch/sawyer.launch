@@ -17,4 +17,5 @@
     
     <node name="tracking" pkg="sawyer_move" type="tracking" output="screen" cwd="node" />
     <node name="collect_data" pkg="sawyer_move" type="collect_data" output="screen" cwd="node" />
+    <node name="control" pkg="sawyer_move" type="control" output="screen" cwd="node" />
 </launch>

@@ -54,6 +54,7 @@ find_package(Eigen3 REQUIRED)
 add_message_files(
   FILES
   YoyoState.msg
+  RobotState.msg
 )
 
 ## Generate services in the 'srv' folder

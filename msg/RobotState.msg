@@ -1,0 +1,2 @@
+float32 ee_z_pos
+float32 ee_z_vel

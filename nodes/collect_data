@@ -4,18 +4,21 @@ import rospy
 import numpy as np
 from std_msgs.msg import Float32
 from datetime import datetime
-from sawyer_move.msg import YoyoState
+from sawyer_move.msg import YoyoState, RobotState
 import time as time
+import os
+
+
 class Collect:
     def __init__(self) -> None:
         # self.yoyo_pos_sub = rospy.Subscriber('yoyo_pos', Float32, self.pos_callback)
         # self.yoyo_rot_sub = rospy.Subscriber('yoyo_rot', Float32, self.rot_callback)
         self.yoyo_state_sub = rospy.Subscriber('yoyo_state', YoyoState, self.state_callback)
-        self.ee_z_vel_sub = rospy.Subscriber('ee_z_vel', Float32, self.ee_z_vel_callback)
-        self.ee_z_pos_sub = rospy.Subscriber('ee_z_pos', Float32, self.ee_z_pos_callback)
+
+        self.robot_state_sub = rospy.Subscriber('robot_state', RobotState, self.robot_state_callback)
 
         date_time = datetime.now().strftime("%m%d%Y_%H%M%S")
-        self.file = open("../data/"+date_time+".txt", "w+")
+        self.file = open("/home/tianyu/yoyo_ws/src/sawyer_move/data/"+date_time+".txt", "w+")
 
         self.curr_yoyo_pos = 0.0
         self.last_yoyo_pos = 0.0
@@ -56,12 +59,10 @@ class Collect:
         self.curr_yoyo_rot = data.yoyo_rot
         self.curr_yoyo_rot_vel = data.yoyo_rotvel
 
+    def robot_state_callback(self, data):
+        self.ee_z_pos = data.ee_z_pos
+        self.ee_z_vel = data.ee_z_vel
 
-    def ee_z_vel_callback(self, data):
-        self.ee_z_vel = data.data
-    
-    def ee_z_pos_callback(self, data):
-        self.ee_z_pos = data.data
 
     def write_data_to_file(self):
         single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.curr_yoyo_pos_vel), str(self.curr_yoyo_rot), str(self.curr_yoyo_rot_vel), str(self.ee_z_pos), str(self.ee_z_vel)]
