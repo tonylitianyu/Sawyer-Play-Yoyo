@@ -13,7 +13,7 @@ from intera_interface import CHECK_VERSION
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header, Float32
 from std_srvs.srv import Empty, EmptyResponse
-from sawyer_move.msg import YoyoState
+from sawyer_move.msg import YoyoState, RobotControl
 from sawyer_move.msg import RobotState
 import pygame
 
@@ -61,6 +61,8 @@ class SawyerMove:
         
         self.joint_state_sub = rospy.Subscriber('/robot/joint_states', JointState, self.jss_callback)
         self.joint_action_pub = rospy.Publisher('/robot/limb/right/joint_command', JointCommand, queue_size=10)
+
+        self.robot_control_sub = rospy.Subscriber('robot_control', RobotControl, self.control_callback)
         self.robot_state_pub = rospy.Publisher('robot_state', RobotState, queue_size=10)
         #self.ee_z_pos_pub = rospy.Publisher('ee_z_pos', Float32, queue_size=10)
         self.ee_z_pos = 0.0
@@ -124,6 +126,9 @@ class SawyerMove:
             self.last_yoyo_vels.add(temp_vel)
 
         self.yoyo_vel = self.last_yoyo_vels.avg()
+
+    def control_callback(self, data):
+        ...
 
 
 

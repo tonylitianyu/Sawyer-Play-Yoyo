@@ -14,7 +14,7 @@ def partition1(max_range, S):
     b = a.sum(axis = 0) <= S
     return (a[:,b].T)
 
-poly_basis = partition1(np.array([1,2,3,4]), 1)
+poly_basis = partition1(np.array([1,2,3,4]), 2)
 print(poly_basis)
 
 
