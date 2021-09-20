@@ -11,7 +11,7 @@ import intera_interface
 import intera_control
 from intera_interface import CHECK_VERSION
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Header, Float32
+from std_msgs.msg import Header, Float32, Int8
 from std_srvs.srv import Empty, EmptyResponse
 from sawyer_move.msg import YoyoState, RobotControl
 from sawyer_move.msg import RobotState
@@ -54,6 +54,8 @@ class SawyerMove:
 
     def __init__(self) -> None:
         self.start_flag = False
+        self.start_pub = rospy.Publisher('start', Int8, queue_size=10)
+
         #self.yoyo_vel_sub = rospy.Subscriber('yoyo_vel', Float32, self.vel_callback)
         self.yoyo_state_sub = rospy.Subscriber('yoyo_state', YoyoState, self.state_callback)
         self.last_yoyo_vels = MovingAverage('yoyo_vel', 5)
@@ -161,19 +163,19 @@ class SawyerMove:
             # if frame.p[2] < 0.60:
             #     self.vel_mag = 0.25#0.22
 
-            # if yoyo vel > 0, ee_z_pos increase positive
-            if self.yoyo_vel > 0:
+            # # if yoyo vel > 0, ee_z_pos increase positive
+            # if self.yoyo_vel > 0:
                 
-                if abs(frame.p[2] - 0.80) > 0.01:
-                    self.vel_mag = 0.35
-                else:
-                    self.vel_mag = 0.0
-            # if yoyo vel < 0, ee_z_pos decrease 
-            if self.yoyo_vel < 0:
-                if abs(frame.p[2] - 0.60) > 0.01:
-                    self.vel_mag = -0.25
-                else:
-                    self.vel_mag = 0.0
+            #     if abs(frame.p[2] - 0.80) > 0.01:
+            #         self.vel_mag = 0.35
+            #     else:
+            #         self.vel_mag = 0.0
+            # # if yoyo vel < 0, ee_z_pos decrease 
+            # if self.yoyo_vel < 0:
+            #     if abs(frame.p[2] - 0.60) > 0.01:
+            #         self.vel_mag = -0.25
+            #     else:
+            #         self.vel_mag = 0.0
 
 
             if abs(frame.p[2] - 0.587) < 1e-2 and self.adjust == 0:
@@ -188,7 +190,10 @@ class SawyerMove:
             self.jac_mat = self.kdl_to_mat(jacobian)
         
 
-        
+            self.start_pub.publish(Int8(1))
+
+        else:
+            self.start_pub.publish(Int8(0))
 
 
     # def start_callback(self, emp):

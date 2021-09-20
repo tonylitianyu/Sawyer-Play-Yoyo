@@ -2,17 +2,59 @@
 #include "sawyer_move/YoyoState.h"
 #include "sawyer_move/RobotState.h"
 #include "sawyer_move/RobotControl.h"
+#include "std_msgs/Int8.h"
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 #include <iostream>
 #include <fstream>
+#include <deque>
 
 using namespace Eigen;
+
+class MovingAverage
+{
+    private:
+        int n_past;
+        std::string name;
+        std::deque<float> buffer;
+
+    public:
+        MovingAverage(const int n_past, const std::string name) : 
+        n_past(n_past),
+        name(name)
+        {
+            buffer.push_back(0.0);
+        }
+
+        void add(float new_data){
+            if (buffer.size() < n_past){
+                buffer.push_back(new_data);
+            }else{
+                buffer.pop_front();
+                buffer.push_back(new_data);
+            }
+        }
+
+        float avg(){
+            float sum = 0.0;
+            for (int i = 0; i < buffer.size(); i++){
+                sum += buffer[i];
+            }
+
+            return sum/buffer.size();
+        }
+    
+        float get_last(){
+            return buffer[buffer.size() - 1];
+        }
+
+};
 
 class Controller
 {
     private:
         ros::Timer timer;
+        ros::Subscriber start_sub;
         ros::Subscriber yoyo_state_sub;
         ros::Subscriber robot_state_sub;
         ros::Publisher control_pub;
@@ -27,17 +69,24 @@ class Controller
 
         VectorXd state;
 
+        MovingAverage past_posvel;
+
+        int start_flag;
+
     public:
         Controller(ros::NodeHandle nh, const int horizon, const MatrixXd K_h_T, const MatrixXd Q, const MatrixXd R) : 
         timer(nh.createTimer(ros::Duration(0.01), &Controller::main_loop, this)),
         yoyo_state_sub(nh.subscribe("yoyo_state", 1000, &Controller::yoyo_state_callback, this)),
         robot_state_sub(nh.subscribe("robot_state", 1000, &Controller::robot_state_callback, this)),
+        start_sub(nh.subscribe("start", 1000, &Controller::start_callback, this)),
         control_pub(nh.advertise<sawyer_move::RobotControl>("robot_control", 1000, true)),
         horizon(horizon),
         kht(K_h_T),
         Q(Q),
         R(R),
-        state(VectorXd::Zero(4))
+        state(VectorXd::Zero(4)),
+        past_posvel(MovingAverage(5, "yoyo_posvel")),
+        start_flag(0)
         {
 
             u = VectorXd::Zero(horizon);
@@ -45,9 +94,20 @@ class Controller
             std::cout << kht << std::endl;
         }
 
+        void start_callback(const std_msgs::Int8 & data){
+            start_flag = data.data;
+        }
+
         void yoyo_state_callback(const sawyer_move::YoyoState & state_data){
+            auto temp_vel = state_data.yoyo_posvel;
+            if (abs(temp_vel - past_posvel.get_last()) > 2.0){
+                past_posvel.add(past_posvel.get_last());
+            }else{
+                past_posvel.add(temp_vel);
+            }
+
             state[0] = state_data.yoyo_pos;
-            state[1] = state_data.yoyo_posvel;
+            state[1] = past_posvel.avg();//state_data.yoyo_posvel;
             state[2] = state_data.yoyo_rotvel;
 
         }
@@ -232,29 +292,37 @@ class Controller
         }
 
 
-        float loss_func(VectorXd state, float u){
-            float loss = (state.transpose() * Q * state + u * R * u)[0];
+        float loss_func(VectorXd state, VectorXd goal_state, float u){
+            float loss = ((state.transpose()-goal_state.transpose()) * Q * (state - goal_state) + u * R * u)[0];
             return loss;
         }
 
-        VectorXd dloss_dx(VectorXd state, float u){
-            VectorXd dldx = 2*Q*state;
+        VectorXd dloss_dx(VectorXd state, VectorXd goal_state, float u){
+            VectorXd dldx = 2*Q*(state - goal_state);
             return dldx;
         }
 
 
-        auto forward(VectorXd state, VectorXd u_traj){
+        auto forward(VectorXd state, VectorXd goal_state, VectorXd u_traj){
             float loss = 0.0;
             VectorXd curr_state = state;
             MatrixXd traj(state.size(), horizon);
+            std::cout << "STARTING" << std::endl;
+            std::cout << "u_traj" << u_traj << std::endl;
             for (int t = 0; t < horizon; t++){
                 traj.col(t) = curr_state;
-                loss += loss_func(curr_state, u_traj[t]);
+                loss += loss_func(curr_state, goal_state, u_traj[t]);
+                std::cout << "loss" << loss << std::endl;
+                std::cout << "current state" << curr_state << std::endl;
+                std::cout << "u" << u_traj[t] << std::endl;
 
                 VectorXd curr_basis = basis_func(curr_state, u_traj[t]);
+                //std::cout << "current basis" << curr_basis << std::endl;
 
                 curr_state = kht * curr_basis;
             }
+
+            std::cout << loss << std::endl;
 
             struct forward_res{
                 MatrixXd traj;
@@ -265,7 +333,7 @@ class Controller
         }
 
 
-        VectorXd backward(MatrixXd state_traj, VectorXd u_traj){
+        VectorXd backward(MatrixXd state_traj, VectorXd goal_state, VectorXd u_traj){
             int state_size = state_traj.rows();
             VectorXd rho;
             rho = VectorXd::Zero(state_size);
@@ -275,7 +343,7 @@ class Controller
             
             for (int t = horizon - 1; t >= 0; t--){
                 
-                VectorXd curr_dldx = dloss_dx(state_traj.col(t), u_traj[t]);
+                VectorXd curr_dldx = dloss_dx(state_traj.col(t), goal_state, u_traj[t]);
                 
                 MatrixXd curr_A_d = kht * dbasis_dx(state_traj.col(t), u_traj[t]);
 
@@ -310,24 +378,24 @@ class Controller
             return temp_u;
         }
 
-        float get_action(VectorXd state, float init_step_size, float beta, float max_u){
+        float get_action(VectorXd state, VectorXd goal_state, float init_step_size, float beta, float max_u){
             
             float k = init_step_size;
 
-            auto [state_traj, loss] = forward(state, u);
+            auto [state_traj, loss] = forward(state, goal_state, u);
             
-            VectorXd du_traj = backward(state_traj, u);
+            VectorXd du_traj = backward(state_traj, goal_state, u);
             
 
             VectorXd temp_u_traj = u + du_traj * k;
-            auto [temp_state_traj, J2u] = forward(state, temp_u_traj);
+            auto [temp_state_traj, J2u] = forward(state, goal_state, temp_u_traj);
 
             float last_J2u = loss;
             while (J2u < last_J2u)
             {
                 k = k * beta;
                 temp_u_traj = u + du_traj * k;
-                auto [temp_state_traj, new_J2u] = forward(state, temp_u_traj);
+                auto [temp_state_traj, new_J2u] = forward(state, goal_state, temp_u_traj);
                 last_J2u = J2u;
                 J2u = new_J2u;
             }
@@ -349,9 +417,19 @@ class Controller
             //     std::cout << i << " " << state[i] << std::endl;
             // }
 
+
             sawyer_move::RobotControl rc;
-            float action = get_action(state, 0.001, 5, 0.3);
-            std::cout << action << std::endl;
+            if (start_flag == 1){
+                
+                VectorXd goal_state(4);
+                goal_state << 0.10, 1.0, 200.0, 0.6;
+                float action = get_action(state, goal_state, 0.001, 5, 0.05);
+            }
+            //std::cout << action << std::endl;
+
+            // std::cout << "state cost" << (state.transpose()-goal_state.transpose()) * Q * (state - goal_state) << std::endl;
+            // std::cout << "input cost" << action * 1000.0 * action << std::endl;
+
             rc.ee_z_vel = 0.0;
             control_pub.publish(rc);
 
@@ -371,12 +449,12 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
 
     VectorXd Q_v(4);
-    Q_v << 1.0,1.0,100.0,1.0;
+    Q_v << 10.0,0.0,0.0,0.0;
     MatrixXd Q = Q_v.asDiagonal();
 
 
     VectorXd R_v(1);
-    R_v << 100.0;
+    R_v << 1000.0;
     MatrixXd R = R_v.asDiagonal();
 
     

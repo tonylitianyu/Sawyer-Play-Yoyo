@@ -23,12 +23,13 @@ print(poly_basis)
 # Koopman set up
 def basis(state, action):
     #extra_basis = np.array([np.sin(state[0]), np.sin(state[1]),np.sin(state[2]),np.sin(state[3]),np.cos(state[0]), np.cos(state[1]),np.cos(state[2]),np.cos(state[3])])
-    extra_basis = np.array([])
+    extra_basis = np.array([state[1]**2*state[3]**2, state])
+
 
     #for k in range(len(state)):
-    for p in poly_basis:
-        curr_basis = (state[0]**p[0]) * (state[1]**p[1]) * (state[2]**p[2]) * (state[3]**p[3]) * action
-        extra_basis = np.append(extra_basis, curr_basis)
+    # for p in poly_basis:
+    #     curr_basis = (state[0]**p[0]) * (state[1]**p[1]) * (state[2]**p[2]) * (state[3]**p[3]) * action
+    #     extra_basis = np.append(extra_basis, curr_basis)
 
     # for k in range(len(state)):
     #     curr_basis = np.cos(state[k])*action
@@ -121,3 +122,5 @@ print(loss)
     
 np.savetxt('../src/kht.csv', np.round(km.get_K_h_T(),5), delimiter=',')
 np.savetxt('../src/koopman.csv', np.round(K,5), delimiter=',')
+
+
