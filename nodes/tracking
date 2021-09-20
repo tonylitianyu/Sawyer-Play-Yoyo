@@ -31,7 +31,18 @@ class Tracking:
 
         #Initializing camera
         self.cap = EasyPySpin.VideoCapture(0)
+        self.cap.set(cv2.CAP_PROP_GAIN, 0.0)
+        self.cap.set(cv2.CAP_PROP_EXPOSURE, 1000.0)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 548)
+        self.cap.set_pyspin_value("AdcBitDepth", "Bit8")
         self.cap.set(cv2.CAP_PROP_FPS, 500)
+        
+        
+
+
+
+
+
         fps  = self.cap.get_pyspin_value("AcquisitionFrameRate")
         print('fps ' + str(fps))
         width  = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)

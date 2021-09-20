@@ -157,13 +157,13 @@ class SawyerMove:
             
 
             self.ee_z_pos = frame.p[2]
-            # if frame.p[2] > 0.75:
-            #     self.vel_mag = -0.25#-0.22
+            if frame.p[2] > 0.75:
+                self.vel_mag = -0.25#-0.22
             
-            # if frame.p[2] < 0.60:
-            #     self.vel_mag = 0.25#0.22
+            if frame.p[2] < 0.60:
+                self.vel_mag = 0.25#0.22
 
-            # # if yoyo vel > 0, ee_z_pos increase positive
+            # if yoyo vel > 0, ee_z_pos increase positive
             # if self.yoyo_vel > 0:
                 
             #     if abs(frame.p[2] - 0.80) > 0.01:

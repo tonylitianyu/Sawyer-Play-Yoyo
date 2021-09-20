@@ -434,9 +434,6 @@ class Controller
             control_pub.publish(rc);
 
         }
-
-
-
 };
 
 
