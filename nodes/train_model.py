@@ -23,7 +23,7 @@ print(poly_basis)
 # Koopman set up
 def basis(state, action):
     #extra_basis = np.array([np.sin(state[0]), np.sin(state[1]),np.sin(state[2]),np.sin(state[3]),np.cos(state[0]), np.cos(state[1]),np.cos(state[2]),np.cos(state[3])])
-    extra_basis = np.array([state[1]**2*state[3]**2, state])
+    extra_basis = np.array([state[1]**2, state[2]**2, state[1]**2*state[2]**2, np.cos(state[0])*action, np.cos(state[1])*action, 1.0])
 
 
     #for k in range(len(state)):
