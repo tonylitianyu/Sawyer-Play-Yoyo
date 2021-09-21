@@ -3,7 +3,7 @@ from koopman import Koopman
 import sys
 import matplotlib.pyplot as plt
 from yoyo_visual import DataProcessing
-
+np.set_printoptions(suppress=True)
 
 args = sys.argv #-train xxx xxx xxx -test xxx
 
@@ -15,7 +15,7 @@ def partition1(max_range, S):
     return (a[:,b].T)
 
 poly_basis = partition1(np.array([1,2,3,4]), 2)
-print(poly_basis)
+
 
 
 
@@ -23,25 +23,9 @@ print(poly_basis)
 # Koopman set up
 def basis(state, action):
     #extra_basis = np.array([np.sin(state[0]), np.sin(state[1]),np.sin(state[2]),np.sin(state[3]),np.cos(state[0]), np.cos(state[1]),np.cos(state[2]),np.cos(state[3])])
-    extra_basis = np.array([state[1]**2, state[2]**2, state[1]**2*state[2]**2, np.cos(state[0])*action, np.cos(state[1])*action, 1.0])
+    extra_basis = np.array([np.cos(state[0]**2), np.cos(state[0]), (state[0]**2)*(action**2), np.cos(state[2]**2), (state[1]**2)*(action**2), state[0]*state[1], state[1]*state[3], action])
+    #np.array([np.cos(state[0]**2), np.cos(state[0]), (state[0]**2)*(action**2), (state[1]**2)*(action**2), np.cos(state[2])*action, action])
 
-
-    #for k in range(len(state)):
-    # for p in poly_basis:
-    #     curr_basis = (state[0]**p[0]) * (state[1]**p[1]) * (state[2]**p[2]) * (state[3]**p[3]) * action
-    #     extra_basis = np.append(extra_basis, curr_basis)
-
-    # for k in range(len(state)):
-    #     curr_basis = np.cos(state[k])*action
-    #     extra_basis = np.append(extra_basis, curr_basis)
-
-    # for k in range(len(state)):
-    #     curr_basis = np.sin(state[k])*action
-    #     extra_basis = np.append(extra_basis, curr_basis) 
- 
-    #extra_basis = np.append(extra_basis, 1.0)
-
-    #action_basis = np.array([action])
     psi = np.hstack((state, extra_basis))
     return psi
 
@@ -58,7 +42,7 @@ print("Training data:")
 for i in range(2, len(args) - 2):
     print(args[i])
     dp = DataProcessing(0, args[i])
-    t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = dp.process()
+    t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = dp.extract_state(dp.process())
 
     state_list = np.hstack((z_pos.reshape(-1,1), z_vel.reshape(-1,1), rot_vel.reshape(-1,1), ee_pos.reshape(-1,1)))
     action_list = vel_input
@@ -85,7 +69,7 @@ print(np.round(K,2))
 print("Test data:")
 print(args[len(args) - 1])
 dp = DataProcessing(0, args[len(args) - 1])
-t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = dp.process()
+t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = dp.extract_state(dp.process())
 
 state_list = np.hstack((z_pos.reshape(-1,1), z_vel.reshape(-1,1), rot_vel.reshape(-1,1), ee_pos.reshape(-1,1)))
 action_list = vel_input

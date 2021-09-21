@@ -81,18 +81,18 @@ class DataProcessing:
                 z_vel[z] = z_vel[z-1]#(z_vel[z-1] + z_vel[z+1])/2
 
 
-        z_vel = self.smooth_with_moving_average(z_vel, 5)
+        z_vel = self.smooth_with_moving_average(z_vel, 10)
 
 
 
         #smooth out rotation velocity
-        for r in range(1,len(rot_vel)-1):
+        for r in range(2,len(rot_vel)-1):
             if rot_vel[r] > 300 or rot_vel[r] < -300:
-                rot_vel[r] = (rot_vel[r-1] + rot_vel[r+1])/2.0
+                rot_vel[r] = (rot_vel[r-1] + rot_vel[r-2])/2.0
 
         for r in range(1,len(rot_vel)-1):
             if rot_vel[r] > 300 or rot_vel[r] < -300:
-                rot_vel[r] = (rot_vel[r-1] + rot_vel[r+1])/2.0
+                rot_vel[r] = (rot_vel[r-1] + rot_vel[r-2])/2.0
 
 
         rot_vel = self.smooth_with_moving_average(rot_vel, 10)
@@ -133,9 +133,13 @@ class DataProcessing:
     def split(self, state_list):
         z_vel = state_list[:,2]
         up_motion = []
+        down_motion = []
         for v in range(len(z_vel)):
             if z_vel[v] > 0:
                 up_motion.append(state_list[v,:])
+            
+            else:
+                down_motion.append(state_list[v,:])
 
         up_motion = np.array(up_motion)
 
