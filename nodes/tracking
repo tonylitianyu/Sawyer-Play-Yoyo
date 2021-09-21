@@ -138,10 +138,14 @@ class Tracking:
         yoyo_center, yoyo_visible, yoyo_rotation = self.apriltag_detection(frame, 0)
 
         if yoyo_visible == False:
+            mirror_yoyo_visible = False
             frame = np.array(np.fliplr(frame[50:500, 370:540]))
-            mirror_yoyo_center, _, mirror_yoyo_rotation = self.apriltag_detection(frame, 0)
+            mirror_yoyo_center, mirror_yoyo_visible, mirror_yoyo_rotation = self.apriltag_detection(frame, 0)
             yoyo_center = mirror_yoyo_center
             yoyo_rotation = mirror_yoyo_rotation
+
+            # if mirror_yoyo_visible is False:
+            #     rospy.logwarn("Cannot detect yoyo in the view and in the mirror")
 
         if len(yoyo_center) != 0:
             if yoyo_visible == False:

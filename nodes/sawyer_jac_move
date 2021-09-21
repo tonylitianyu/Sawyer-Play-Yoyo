@@ -157,11 +157,13 @@ class SawyerMove:
             
 
             self.ee_z_pos = frame.p[2]
-            if frame.p[2] > 0.75:
-                self.vel_mag = -0.25#-0.22
+
+
+            # if frame.p[2] > 0.75:
+            #     self.vel_mag = -0.25#-0.22
             
-            if frame.p[2] < 0.60:
-                self.vel_mag = 0.25#0.22
+            # if frame.p[2] < 0.60:
+            #     self.vel_mag = 0.25#0.22
 
             # if yoyo vel > 0, ee_z_pos increase positive
             # if self.yoyo_vel > 0:
@@ -189,11 +191,6 @@ class SawyerMove:
 
             self.jac_mat = self.kdl_to_mat(jacobian)
         
-
-            self.start_pub.publish(Int8(1))
-
-        else:
-            self.start_pub.publish(Int8(0))
 
 
     # def start_callback(self, emp):
@@ -266,6 +263,11 @@ class SawyerMove:
             self.robot_state_pub.publish(robot_state)
             # self.ee_z_vel_pub.publish(Float32(self.vel_mag))
             # self.ee_z_pos_pub.publish(Float32(self.ee_z_pos))
+
+            if self.ee_z_pos > 0.50:
+                self.start_pub.publish(Int8(1))
+            else:
+                self.start_pub.publish(Int8(0))
 
 
 

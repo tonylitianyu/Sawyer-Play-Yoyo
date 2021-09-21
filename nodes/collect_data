@@ -2,7 +2,7 @@
 
 import rospy
 import numpy as np
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Int8
 from datetime import datetime
 from sawyer_move.msg import YoyoState, RobotState
 import time as time
@@ -16,6 +16,9 @@ class Collect:
         self.yoyo_state_sub = rospy.Subscriber('yoyo_state', YoyoState, self.state_callback)
 
         self.robot_state_sub = rospy.Subscriber('robot_state', RobotState, self.robot_state_callback)
+
+        self.start_sub = rospy.Subscriber('start', Int8, self.start_callback)
+        self.start = 0
 
         date_time = datetime.now().strftime("%m%d%Y_%H%M%S")
         self.file = open("/home/tianyu/yoyo_ws/src/sawyer_move/data/"+date_time+".txt", "w+")
@@ -63,12 +66,16 @@ class Collect:
         self.ee_z_pos = data.ee_z_pos
         self.ee_z_vel = data.ee_z_vel
 
+    def start_callback(self, data):
+        self.start = data.data
 
     def write_data_to_file(self):
-        single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.curr_yoyo_pos_vel), str(self.curr_yoyo_rot), str(self.curr_yoyo_rot_vel), str(self.ee_z_pos), str(self.ee_z_vel)]
+        
+        if self.start == 1:
+            single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.curr_yoyo_pos_vel), str(self.curr_yoyo_rot), str(self.curr_yoyo_rot_vel), str(self.ee_z_pos), str(self.ee_z_vel)]
 
-        delim = ", "
-        self.file.write(delim.join(single_line) + "\n")
+            delim = ", "
+            self.file.write(delim.join(single_line) + "\n")
 
 
 

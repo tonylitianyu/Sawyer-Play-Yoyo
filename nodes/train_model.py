@@ -23,8 +23,9 @@ poly_basis = partition1(np.array([1,2,3,4]), 2)
 # Koopman set up
 def basis(state, action):
     #extra_basis = np.array([np.sin(state[0]), np.sin(state[1]),np.sin(state[2]),np.sin(state[3]),np.cos(state[0]), np.cos(state[1]),np.cos(state[2]),np.cos(state[3])])
-    extra_basis = np.array([np.cos(state[0]**2), np.cos(state[0]), (state[0]**2)*(action**2), np.cos(state[2]**2), (state[1]**2)*(action**2), state[0]*state[1], state[1]*state[3], action])
+    extra_basis = np.array([np.cos(state[0]**2), action])
     #np.array([np.cos(state[0]**2), np.cos(state[0]), (state[0]**2)*(action**2), (state[1]**2)*(action**2), np.cos(state[2])*action, action])
+    #np.array([np.cos(state[0]**2), np.cos(state[0]), (state[0]**2)*(action**2), np.cos(state[2]**2), (state[1]**2)*(action**2), state[0]*state[1], state[1]*state[3], action])
 
     psi = np.hstack((state, extra_basis))
     return psi
@@ -83,6 +84,9 @@ freq = 15
 for t in range(1,len(t_step)-1):
     if t % freq == 0:
         predict_state = state_list[t]
+
+    print(K_h_T)
+    print(basis(predict_state, action_list[t]))
     predict_state = (K_h_T @ basis(predict_state, action_list[t]).reshape(-1,1)).flatten()
     predict_arr.append(predict_state)
 

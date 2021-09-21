@@ -85,12 +85,12 @@ class Controller
         Q(Q),
         R(R),
         state(VectorXd::Zero(4)),
-        past_posvel(MovingAverage(5, "yoyo_posvel")),
+        past_posvel(MovingAverage(10, "yoyo_posvel")),
         start_flag(0)
         {
 
             u = VectorXd::Zero(horizon);
-            kht = load_csv("/home/tianyu/yoyo_ws/src/sawyer_move/src/kht.csv");
+            kht = load_csv<MatrixXd>("/home/tianyu/yoyo_ws/src/sawyer_move/src/kht.csv");
             std::cout << kht << std::endl;
         }
 
@@ -118,7 +118,8 @@ class Controller
         }
 
         //source: https://stackoverflow.com/questions/34247057/how-to-read-csv-file-and-assign-to-eigen-matrix
-        MatrixXd load_csv (const std::string & path) {
+        template<typename M>
+        M load_csv (const std::string & path) {
             std::ifstream indata;
             indata.open(path);
             std::string line;
@@ -134,16 +135,16 @@ class Controller
                 ++rows;
             }
             
-            double* ptr = &values[0];
+            //double* ptr = &values[0];
 
-            Eigen::Map<Eigen::MatrixXd> res(ptr, rows, values.size()/rows);
-            return res;
+            //Eigen::Map<Eigen::MatrixXd> res(values.data(), rows, values.size()/rows);
+            return Map<const Matrix<typename M::Scalar, M::RowsAtCompileTime, M::ColsAtCompileTime, RowMajor>>(values.data(), rows, values.size()/rows);;
         }
 
         VectorXd basis_func(VectorXd state, float u){
 
             VectorXd extra_basis;
-            extra_basis = VectorXd::Zero(18);
+            extra_basis = VectorXd::Zero(6);
             double z = state[0];
             double zd = state[1];
             double thetad = state[2];
@@ -156,20 +157,8 @@ class Controller
             extra_basis(1, 0) = zd;
             extra_basis(2, 0) = thetad;
             extra_basis(3, 0) = h;
-            extra_basis(4, 0) = a;
-            extra_basis(5, 0) = a*h;
-            extra_basis(6, 0) = a*pow(h, 2);
-            extra_basis(7, 0) = a*thetad;
-            extra_basis(8, 0) = a*h*thetad;
-            extra_basis(9, 0) = a*pow(thetad, 2);
-            extra_basis(10, 0) = a*zd;
-            extra_basis(11, 0) = a*h*zd;
-            extra_basis(12, 0) = a*thetad*zd;
-            extra_basis(13, 0) = a*pow(zd, 2);
-            extra_basis(14, 0) = a*z;
-            extra_basis(15, 0) = a*h*z;
-            extra_basis(16, 0) = a*thetad*z;
-            extra_basis(17, 0) = a*z*zd;
+            extra_basis(4, 0) = cos(pow(z, 2));
+            extra_basis(5, 0) = a;
 
             return extra_basis;
         }
@@ -177,7 +166,7 @@ class Controller
 
         MatrixXd dbasis_dx(VectorXd state, float u){
             MatrixXd dbdx;
-            dbdx = MatrixXd::Zero(18, 4);
+            dbdx = MatrixXd::Zero(6, 4);
             double z = state[0];
             double zd = state[1];
             double thetad = state[2];
@@ -187,74 +176,26 @@ class Controller
             dbdx(1, 0) = 0;
             dbdx(2, 0) = 0;
             dbdx(3, 0) = 0;
-            dbdx(4, 0) = 0;
+            dbdx(4, 0) = -2*z*sin(pow(z, 2));
             dbdx(5, 0) = 0;
-            dbdx(6, 0) = 0;
-            dbdx(7, 0) = 0;
-            dbdx(8, 0) = 0;
-            dbdx(9, 0) = 0;
-            dbdx(10, 0) = 0;
-            dbdx(11, 0) = 0;
-            dbdx(12, 0) = 0;
-            dbdx(13, 0) = 0;
-            dbdx(14, 0) = a;
-            dbdx(15, 0) = a*h;
-            dbdx(16, 0) = a*thetad;
-            dbdx(17, 0) = a*zd;
             dbdx(0, 1) = 0;
             dbdx(1, 1) = 1;
             dbdx(2, 1) = 0;
             dbdx(3, 1) = 0;
             dbdx(4, 1) = 0;
             dbdx(5, 1) = 0;
-            dbdx(6, 1) = 0;
-            dbdx(7, 1) = 0;
-            dbdx(8, 1) = 0;
-            dbdx(9, 1) = 0;
-            dbdx(10, 1) = a;
-            dbdx(11, 1) = a*h;
-            dbdx(12, 1) = a*thetad;
-            dbdx(13, 1) = 2*a*zd;
-            dbdx(14, 1) = 0;
-            dbdx(15, 1) = 0;
-            dbdx(16, 1) = 0;
-            dbdx(17, 1) = a*z;
             dbdx(0, 2) = 0;
             dbdx(1, 2) = 0;
             dbdx(2, 2) = 1;
             dbdx(3, 2) = 0;
             dbdx(4, 2) = 0;
             dbdx(5, 2) = 0;
-            dbdx(6, 2) = 0;
-            dbdx(7, 2) = a;
-            dbdx(8, 2) = a*h;
-            dbdx(9, 2) = 2*a*thetad;
-            dbdx(10, 2) = 0;
-            dbdx(11, 2) = 0;
-            dbdx(12, 2) = a*zd;
-            dbdx(13, 2) = 0;
-            dbdx(14, 2) = 0;
-            dbdx(15, 2) = 0;
-            dbdx(16, 2) = a*z;
-            dbdx(17, 2) = 0;
             dbdx(0, 3) = 0;
             dbdx(1, 3) = 0;
             dbdx(2, 3) = 0;
             dbdx(3, 3) = 1;
             dbdx(4, 3) = 0;
-            dbdx(5, 3) = a;
-            dbdx(6, 3) = 2*a*h;
-            dbdx(7, 3) = 0;
-            dbdx(8, 3) = a*thetad;
-            dbdx(9, 3) = 0;
-            dbdx(10, 3) = 0;
-            dbdx(11, 3) = a*zd;
-            dbdx(12, 3) = 0;
-            dbdx(13, 3) = 0;
-            dbdx(14, 3) = 0;
-            dbdx(15, 3) = a*z;
-            dbdx(16, 3) = 0;
-            dbdx(17, 3) = 0;            
+            dbdx(5, 3) = 0;        
 
 
             return dbdx;
@@ -267,26 +208,14 @@ class Controller
             double h = state[3];
             double a = u;
             VectorXd dbdu;
-            dbdu = VectorXd::Zero(18);
+            dbdu = VectorXd::Zero(6);
 
             dbdu(0, 0) = 0;
             dbdu(1, 0) = 0;
             dbdu(2, 0) = 0;
             dbdu(3, 0) = 0;
-            dbdu(4, 0) = 1;
-            dbdu(5, 0) = h;
-            dbdu(6, 0) = pow(h, 2);
-            dbdu(7, 0) = thetad;
-            dbdu(8, 0) = h*thetad;
-            dbdu(9, 0) = pow(thetad, 2);
-            dbdu(10, 0) = zd;
-            dbdu(11, 0) = h*zd;
-            dbdu(12, 0) = thetad*zd;
-            dbdu(13, 0) = pow(zd, 2);
-            dbdu(14, 0) = z;
-            dbdu(15, 0) = h*z;
-            dbdu(16, 0) = thetad*z;
-            dbdu(17, 0) = z*zd;
+            dbdu(4, 0) = 0;
+            dbdu(5, 0) = 1;
 
             return dbdu;
         }
@@ -317,8 +246,8 @@ class Controller
                 std::cout << "u" << u_traj[t] << std::endl;
 
                 VectorXd curr_basis = basis_func(curr_state, u_traj[t]);
-                //std::cout << "current basis" << curr_basis << std::endl;
-
+                std::cout << "current basis" << curr_basis << std::endl;
+                std::cout << "kht" << kht << std::endl;
                 curr_state = kht * curr_basis;
             }
 
@@ -375,6 +304,8 @@ class Controller
             temp_u = temp_u.cwiseMin(bound_arr).cwiseMax(-bound_arr);
 
 
+
+
             return temp_u;
         }
 
@@ -387,14 +318,14 @@ class Controller
             VectorXd du_traj = backward(state_traj, goal_state, u);
             
 
-            VectorXd temp_u_traj = u + du_traj * k;
+            VectorXd temp_u_traj = clip(u + du_traj * k, max_u);
             auto [temp_state_traj, J2u] = forward(state, goal_state, temp_u_traj);
 
             float last_J2u = loss;
             while (J2u < last_J2u)
             {
                 k = k * beta;
-                temp_u_traj = u + du_traj * k;
+                temp_u_traj = clip(u + du_traj * k, max_u);
                 auto [temp_state_traj, new_J2u] = forward(state, goal_state, temp_u_traj);
                 last_J2u = J2u;
                 J2u = new_J2u;
@@ -419,6 +350,7 @@ class Controller
 
 
             sawyer_move::RobotControl rc;
+            
             if (start_flag == 1){
                 
                 VectorXd goal_state(4);
@@ -456,7 +388,7 @@ int main(int argc, char **argv)
 
     
 
-    Controller controller = Controller(n, 15, Q, Q, R);
+    Controller controller = Controller(n, 10, Q, Q, R);
     ros::spin();
 
 
