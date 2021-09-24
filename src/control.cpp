@@ -70,6 +70,7 @@ class Controller
         VectorXd state;
 
         MovingAverage past_posvel;
+        MovingAverage past_rotvel;
 
         int start_flag;
 
@@ -86,6 +87,7 @@ class Controller
         R(R),
         state(VectorXd::Zero(4)),
         past_posvel(MovingAverage(10, "yoyo_posvel")),
+        past_rotvel(MovingAverage(10, "yoyo_rotvel")),
         start_flag(0)
         {
 
@@ -108,7 +110,17 @@ class Controller
 
             state[0] = state_data.yoyo_pos;
             state[1] = past_posvel.avg();//state_data.yoyo_posvel;
-            state[2] = state_data.yoyo_rotvel;
+
+
+            auto temp_rot_vel = state_data.yoyo_rotvel;
+            if (abs(temp_rot_vel) > 300.0){
+                past_rotvel.add(past_rotvel.get_last());
+            }else{
+                past_rotvel.add(temp_rot_vel);
+            }
+
+
+            state[2] = past_rotvel.avg();
 
         }
 
@@ -246,8 +258,6 @@ class Controller
                 std::cout << "u" << u_traj[t] << std::endl;
 
                 VectorXd curr_basis = basis_func(curr_state, u_traj[t]);
-                std::cout << "current basis" << curr_basis << std::endl;
-                std::cout << "kht" << kht << std::endl;
                 curr_state = kht * curr_basis;
             }
 
@@ -350,19 +360,19 @@ class Controller
 
 
             sawyer_move::RobotControl rc;
-            
+            float action = 0.0;
             if (start_flag == 1){
                 
                 VectorXd goal_state(4);
                 goal_state << 0.10, 1.0, 200.0, 0.6;
-                float action = get_action(state, goal_state, 0.001, 5, 0.05);
+                action = get_action(state, goal_state, 0.001, 5, 0.30);
             }
             //std::cout << action << std::endl;
 
             // std::cout << "state cost" << (state.transpose()-goal_state.transpose()) * Q * (state - goal_state) << std::endl;
             // std::cout << "input cost" << action * 1000.0 * action << std::endl;
 
-            rc.ee_z_vel = 0.0;
+            rc.ee_z_vel = action;
             control_pub.publish(rc);
 
         }
@@ -378,12 +388,12 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
 
     VectorXd Q_v(4);
-    Q_v << 10.0,0.0,0.0,0.0;
+    Q_v << 0.0,1.0,0.0,0.0;
     MatrixXd Q = Q_v.asDiagonal();
 
 
     VectorXd R_v(1);
-    R_v << 1000.0;
+    R_v << 0.1;
     MatrixXd R = R_v.asDiagonal();
 
     

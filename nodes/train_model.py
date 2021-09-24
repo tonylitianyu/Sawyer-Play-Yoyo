@@ -85,8 +85,8 @@ for t in range(1,len(t_step)-1):
     if t % freq == 0:
         predict_state = state_list[t]
 
-    print(K_h_T)
-    print(basis(predict_state, action_list[t]))
+    #print(K_h_T)
+    #print(basis(predict_state, action_list[t]))
     predict_state = (K_h_T @ basis(predict_state, action_list[t]).reshape(-1,1)).flatten()
     predict_arr.append(predict_state)
 

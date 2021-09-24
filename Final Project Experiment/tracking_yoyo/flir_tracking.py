@@ -19,6 +19,7 @@ def apriltag_detection(gray_img):
     # loop over the AprilTag detection results
     yoyo_visible = False
     yoyo_center = []
+    robot_origin = []
     for r in results:
         # extract the bounding box (x, y)-coordinates for the AprilTag
         # and convert each of the (x, y)-coordinate pairs to integers
@@ -41,18 +42,24 @@ def apriltag_detection(gray_img):
         if r.tag_id == 2:
             #yoyo_center.append((cX,cY))
             #print(cX,cY)
-            yoyo_center = [str(cX), str(cY)]
+            #yoyo_center = [str(cX), str(cY)]
+            ...
 
         if r.tag_id == 0:
             yoyo_visible = True
             pos_results, _, _ = detector.detection_pose(r, camera_params=np.array([729.78671005,731.29832261,362.9618687,268.38005998]), tag_size=0.053)
             print(np.arctan2(pos_results[1][0], pos_results[0][0]))
+            yoyo_center = [str(cX), str(cY)]
+
+        if r.tag_id == 5:
+            robot_origin = [str(cX), str(cY)]
+
         cv2.putText(gray_img, tagID, (ptA[0], ptA[1] - 15),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         #print("[INFO] tag family: {}".format(tagFamily))
 
 
-    return yoyo_center, yoyo_visible
+    return yoyo_center, yoyo_visible, robot_origin
 
 def load_coefficients():
     '''Loads camera matrix and distortion coefficients.'''
@@ -98,19 +105,20 @@ while True:
 
     frame = cv2.remap(frame, mapx, mapy, cv2.INTER_LINEAR)
 
-    #yoyo_center, yoyo_visible = apriltag_detection(frame)
+    yoyo_center, yoyo_visible, robot_origin = apriltag_detection(frame)
     #if yoyo_visible == False:
-    mirr_frame = np.array(np.fliplr(frame[50:500, 370:540]))
-    mirror_yoyo_center, mirror_yoyo_visible = apriltag_detection(mirr_frame)
+    # mirr_frame = np.array(np.fliplr(frame[50:500, 370:540]))
+    # mirror_yoyo_center, mirror_yoyo_visible = apriltag_detection(mirr_frame)
 
     # delim = ", "
     # if len(yoyo_center) == 0:
     #     yoyo_center = ['None', 'None']
 
     # file.write(delim.join(yoyo_center) + "\n")
-    #print(yoyo_center)
+    print("yoyo_center ", yoyo_center)
+    print("robot_origin ", robot_origin)
 
-    cv2.imshow('img', mirr_frame)
+    cv2.imshow('img', frame)
     key = cv2.waitKey(30)
     if key == ord("q"):
         break

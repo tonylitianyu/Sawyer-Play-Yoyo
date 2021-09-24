@@ -34,7 +34,7 @@ class DataProcessing:
         t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = self.extract_state(state)
 
         axs[0].plot(t_step, z_pos)
-        axs[0].set_ylim([0.0,1.0])
+        axs[0].set_ylim([0.0,1.5])
         axs[0].invert_yaxis()
         axs[0].set_title('yoyo z pos')
 
@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
 
     axs[0].plot(range(len(z_pos)), z_pos)
-    axs[0].set_ylim([0.0,1.0])
+    axs[0].set_ylim([0.0,1.5])
     axs[0].invert_yaxis()
     axs[0].set_title('yoyo z pos')
 

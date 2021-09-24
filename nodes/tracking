@@ -4,7 +4,7 @@ import rospy
 import numpy as np
 from geometry_msgs.msg import Pose
 from std_msgs.msg import Float32
-from sawyer_move.msg import YoyoState
+from sawyer_move.msg import YoyoState, RobotState
 import cv2
 import EasyPySpin
 import apriltag
@@ -17,10 +17,13 @@ class Tracking:
         # self.vel_pub = rospy.Publisher('yoyo_vel', Float32, queue_size=10)
         # self.rot_pub = rospy.Publisher('yoyo_rot', Float32, queue_size=10)
         self.yoyo_state_pub = rospy.Publisher('yoyo_state', YoyoState, queue_size=10)
+        self.robot_state_pub = rospy.Subscriber('robot_state', RobotState, self.robot_state_callback)
 
 
         self.dis_per_pixel = 0.0
         self.mirr_dis_per_pixel = 0.0
+        self.robot_origin_z = 0
+        self.ee_z_pos = 0.0
 
         self.last_rot = 0.0
 
@@ -53,6 +56,9 @@ class Tracking:
 
         self.last_yoyo_z_dis = 0.0
         self.last_yoyo_pos_time = time.time()
+
+    def robot_state_callback(self, data):
+        self.ee_z_pos = data.ee_z_pos
 
     #     self.load_coefficients()
 
@@ -149,10 +155,10 @@ class Tracking:
 
         if len(yoyo_center) != 0:
             if yoyo_visible == False:
-                yoyo_z_dis = yoyo_center[1] * self.mirr_dis_per_pixel - 0.01
+                yoyo_z_dis = (yoyo_center[1] * self.mirr_dis_per_pixel - 0.01) - (self.robot_origin_z*self.mirr_dis_per_pixel) + self.ee_z_pos
                 
             else:
-                yoyo_z_dis = yoyo_center[1] * self.dis_per_pixel
+                yoyo_z_dis = (yoyo_center[1] * self.dis_per_pixel) - (self.robot_origin_z*self.dis_per_pixel) + self.ee_z_pos
             
             #print("distance from the top: " + str(yoyo_z_dis))
 
@@ -198,7 +204,7 @@ def main():
 
     tracking.dis_per_pixel = 0.002127659574468085
     tracking.mirr_dis_per_pixel = 0.002702702702702703
-
+    tracking.robot_origin_z = 188
 
     while not rospy.is_shutdown():
 

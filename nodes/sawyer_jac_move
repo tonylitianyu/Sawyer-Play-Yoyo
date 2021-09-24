@@ -130,8 +130,7 @@ class SawyerMove:
         self.yoyo_vel = self.last_yoyo_vels.avg()
 
     def control_callback(self, data):
-        ...
-
+        ...#self.vel_mag = data.ee_z_vel
 
 
     def jss_callback(self, data):
@@ -159,11 +158,11 @@ class SawyerMove:
             self.ee_z_pos = frame.p[2]
 
 
-            # if frame.p[2] > 0.75:
-            #     self.vel_mag = -0.25#-0.22
+            if frame.p[2] > 0.75:
+                self.vel_mag = -0.25#-0.22
             
-            # if frame.p[2] < 0.60:
-            #     self.vel_mag = 0.25#0.22
+            if frame.p[2] < 0.60:
+                self.vel_mag = 0.25#0.22
 
             # if yoyo vel > 0, ee_z_pos increase positive
             # if self.yoyo_vel > 0:
@@ -264,7 +263,7 @@ class SawyerMove:
             # self.ee_z_vel_pub.publish(Float32(self.vel_mag))
             # self.ee_z_pos_pub.publish(Float32(self.ee_z_pos))
 
-            if self.ee_z_pos > 0.50:
+            if self.ee_z_pos > 0.40:
                 self.start_pub.publish(Int8(1))
             else:
                 self.start_pub.publish(Int8(0))
