@@ -136,15 +136,16 @@ class DataProcessing:
         down_motion = []
         for v in range(len(z_vel)):
             if z_vel[v] > 0:
-                up_motion.append(state_list[v,:])
+                down_motion.append(state_list[v,:])
             
             else:
-                down_motion.append(state_list[v,:])
+                up_motion.append(state_list[v,:])
 
+        down_motion = np.array(down_motion)
         up_motion = np.array(up_motion)
 
 
-        return up_motion
+        return down_motion, up_motion
 
     def create_state_pair(self, truncated_state, state_indexes):
         z_pos = truncated_state[:,1]
@@ -175,7 +176,7 @@ if __name__ == "__main__":
 
 
 
-    up_motion = dp.split(processed_state)
+    down_motion, up_motion = dp.split(processed_state)
 
     data_group, action_group = dp.create_state_pair(up_motion, [1,2,4,5])
 
