@@ -35,7 +35,6 @@ class DataProcessing:
 
         axs[0].plot(t_step, z_pos)
         axs[0].set_ylim([0.0,1.5])
-        axs[0].invert_yaxis()
         axs[0].set_title('yoyo z pos')
 
         axs[1].plot(t_step, z_vel)
@@ -74,34 +73,34 @@ class DataProcessing:
 
         t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = self.extract_state(line_list)
 
-
-        #smooth out yoyo pos velocity
-        for z in range(1, len(z_vel) - 1):
-            if abs(z_vel[z - 1] - z_vel[z]) > 2.0:
-                z_vel[z] = z_vel[z-1]#(z_vel[z-1] + z_vel[z+1])/2
+        # z_pos += 1.0
+        # ee_pos += 1.0
 
 
-        z_vel = self.smooth_with_moving_average(z_vel, 10)
+        # for rv in range(1, len(rot_vel)):
+        #     rot_vel[rv] = (rot[rv] - rot[rv-1])/(t_step[rv] - t_step[rv-1])
 
 
-
-        #smooth out rotation velocity
-        for r in range(2,len(rot_vel)-1):
-            if rot_vel[r] > 300 or rot_vel[r] < -300:
-                rot_vel[r] = (rot_vel[r-1] + rot_vel[r-2])/2.0
-
-        for r in range(1,len(rot_vel)-1):
-            if rot_vel[r] > 300 or rot_vel[r] < -300:
-                rot_vel[r] = (rot_vel[r-1] + rot_vel[r-2])/2.0
+        # #smooth out yoyo pos velocity
+        # for z in range(1, len(z_vel) - 1):
+        #     if abs(z_vel[z - 1] - z_vel[z]) > 2.0:
+        #         z_vel[z] = z_vel[z-1]#(z_vel[z-1] + z_vel[z+1])/2
 
 
-        rot_vel = self.smooth_with_moving_average(rot_vel, 10)
-
-        rot = rot % 2*np.pi
-        rot = np.unwrap(rot)
+        # z_vel = self.smooth_with_moving_average(z_vel, 10)
 
 
 
+        # #smooth out rotation velocity
+        # for r in range(2,len(rot_vel)-1):
+        #     if rot_vel[r] > 300 or rot_vel[r] < -300:
+        #         rot_vel[r] = (rot_vel[r-1] + rot_vel[r-2])/2.0
+
+
+        # rot_vel = self.smooth_with_moving_average(rot_vel, 10)
+
+        # rot = rot % 2*np.pi
+        # rot = np.unwrap(rot)
 
 
         # start_index = 800
@@ -114,7 +113,7 @@ class DataProcessing:
 
         # self.start_index = start_index
 
-        processed_state = np.hstack((t_step.reshape(-1,1), z_pos.reshape(-1,1), z_vel.reshape(-1,1), rot.reshape(-1,1), abs(rot_vel).reshape(-1,1), ee_pos.reshape(-1,1), vel_input.reshape(-1,1)))
+        processed_state = np.hstack((t_step.reshape(-1,1), z_pos.reshape(-1,1), z_vel.reshape(-1,1), rot.reshape(-1,1), rot_vel.reshape(-1,1), ee_pos.reshape(-1,1), vel_input.reshape(-1,1)))
 
         return processed_state
 

@@ -67,7 +67,8 @@ class SawyerMove:
         self.robot_control_sub = rospy.Subscriber('robot_control', RobotControl, self.control_callback)
         self.robot_state_pub = rospy.Publisher('robot_state', RobotState, queue_size=10)
         #self.ee_z_pos_pub = rospy.Publisher('ee_z_pos', Float32, queue_size=10)
-        self.ee_z_pos = 0.0
+        self.ee_z_pos = 1.58
+        self.robot_origin_from_ground = 1.0
         #self.start_srv = rospy.Service("start", Empty, self.start_callback)
         self.curr_joint_pos = np.zeros(9)
         self.joint_names = []
@@ -155,7 +156,7 @@ class SawyerMove:
             # print(" ")
             
 
-            self.ee_z_pos = frame.p[2]
+            self.ee_z_pos = frame.p[2] + self.robot_origin_from_ground
 
 
             if frame.p[2] > 0.75:
@@ -255,7 +256,6 @@ class SawyerMove:
                 self.adjust = 2
 
 
-
             robot_state = RobotState()
             robot_state.ee_z_pos = self.ee_z_pos
             robot_state.ee_z_vel = self.vel_mag
@@ -263,7 +263,7 @@ class SawyerMove:
             # self.ee_z_vel_pub.publish(Float32(self.vel_mag))
             # self.ee_z_pos_pub.publish(Float32(self.ee_z_pos))
 
-            if self.ee_z_pos > 0.40:
+            if self.ee_z_pos > 1.40:
                 self.start_pub.publish(Int8(1))
             else:
                 self.start_pub.publish(Int8(0))
