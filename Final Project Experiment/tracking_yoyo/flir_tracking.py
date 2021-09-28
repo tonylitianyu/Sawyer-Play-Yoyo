@@ -48,7 +48,11 @@ def apriltag_detection(gray_img):
         if r.tag_id == 0:
             yoyo_visible = True
             pos_results, _, _ = detector.detection_pose(r, camera_params=np.array([729.78671005,731.29832261,362.9618687,268.38005998]), tag_size=0.053)
-            print(np.arctan2(pos_results[1][0], pos_results[0][0]))
+            #print(pos_results[0:3, 0:3])
+
+            # print('angle x: ', np.arctan2(pos_results[2][1], pos_results[2][2]))
+            # print('angle y: ', np.arctan2(-pos_results[2][0], np.sqrt(pos_results[2][1]**2 + pos_results[2][2]**2)))
+            print('angle z: ', np.arctan2(pos_results[1][0], pos_results[0][0]))
             yoyo_center = [str(cX), str(cY)]
 
         if r.tag_id == 5:
@@ -107,16 +111,16 @@ while True:
 
     yoyo_center, yoyo_visible, robot_origin = apriltag_detection(frame)
     #if yoyo_visible == False:
-    # mirr_frame = np.array(np.fliplr(frame[50:500, 370:540]))
-    # mirror_yoyo_center, mirror_yoyo_visible = apriltag_detection(mirr_frame)
+    #mirr_frame = np.array(np.fliplr(frame[50:500, 370:540]))
+    #mirror_yoyo_center, mirror_yoyo_visible, robot_origin = apriltag_detection(mirr_frame)
 
     # delim = ", "
     # if len(yoyo_center) == 0:
     #     yoyo_center = ['None', 'None']
 
     # file.write(delim.join(yoyo_center) + "\n")
-    print("yoyo_center ", yoyo_center)
-    print("robot_origin ", robot_origin)
+    # print("yoyo_center ", yoyo_center)
+    #print("robot_origin ", robot_origin)
 
     cv2.imshow('img', frame)
     key = cv2.waitKey(30)

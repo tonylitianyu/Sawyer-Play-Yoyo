@@ -97,6 +97,9 @@ class DataProcessing:
 
         rot_vel = self.smooth_with_moving_average(rot_vel, 10)
 
+        rot = rot % 2*np.pi
+        rot = np.unwrap(rot)
+
 
 
 
@@ -189,6 +192,7 @@ if __name__ == "__main__":
 
 
     z_pos, z_vel, rot_vel, ee_pos = state_list[:,0], state_list[:,1], state_list[:,2], state_list[:,3]
+
 
 
     fig, axs = plt.subplots(5)

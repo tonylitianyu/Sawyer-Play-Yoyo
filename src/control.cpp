@@ -248,20 +248,20 @@ class Controller
             float loss = 0.0;
             VectorXd curr_state = state;
             MatrixXd traj(state.size(), horizon);
-            std::cout << "STARTING" << std::endl;
-            std::cout << "u_traj" << u_traj << std::endl;
+            // std::cout << "STARTING" << std::endl;
+            // std::cout << "u_traj" << u_traj << std::endl;
             for (int t = 0; t < horizon; t++){
                 traj.col(t) = curr_state;
                 loss += loss_func(curr_state, goal_state, u_traj[t]);
-                std::cout << "loss" << loss << std::endl;
-                std::cout << "current state" << curr_state << std::endl;
-                std::cout << "u" << u_traj[t] << std::endl;
+                // std::cout << "loss" << loss << std::endl;
+                // std::cout << "current state" << curr_state << std::endl;
+                // std::cout << "u" << u_traj[t] << std::endl;
 
                 VectorXd curr_basis = basis_func(curr_state, u_traj[t]);
                 curr_state = kht * curr_basis;
             }
 
-            std::cout << loss << std::endl;
+            // std::cout << loss << std::endl;
 
             struct forward_res{
                 MatrixXd traj;
