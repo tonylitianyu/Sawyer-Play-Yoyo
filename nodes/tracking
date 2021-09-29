@@ -208,13 +208,6 @@ class Tracking:
             yoyo_z_vel = (self.last_yoyo_z_dis.avg() - last_yoyo_z_dis_avg)/(curr_time - self.last_yoyo_pos_time)
             yoyo_rot_vel = (self.last_rots.avg() - last_rots_avg)/(curr_time - self.last_yoyo_pos_time)
 
-            # if yoyo_rotation > 300:
-            #     print('last yoyo z: ', self.last_yoyo_z_dis.avg())
-            #     print('ee z pos: ', self.ee_z_pos)
-            #     print('yoyo_rotation: ', yoyo_rotation)
-            #     print('last_rots: ', self.last_rots.avg())
-            #     for r in self.last_rots.buffer:
-            #         print(r)
 
             yoyo_state = YoyoState()
             yoyo_state.yoyo_pos = yoyo_z_dis
@@ -225,11 +218,6 @@ class Tracking:
             self.yoyo_state_pub.publish(yoyo_state)
 
 
-            # self.last_rot = yoyo_rotation
-            # self.last_yoyo_z_dis = yoyo_z_dis
-
-            # self.last_rots.add(yoyo_rotation)
-            # self.last_yoyo_z_dis.add(yoyo_z_dis)
             self.last_yoyo_pos_time = curr_time
 
         # cv2.imshow('img', frame)

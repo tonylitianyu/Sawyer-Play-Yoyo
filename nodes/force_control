@@ -28,25 +28,25 @@ import time
 
 # from intera_interface import CHECK_VERSION
 
-class MovingAverage:
-    def __init__(self, name, n_past) -> None:
-        self.name = name
-        self.n_past = n_past
-        self.buffer = [0.0]
+# class MovingAverage:
+#     def __init__(self, name, n_past) -> None:
+#         self.name = name
+#         self.n_past = n_past
+#         self.buffer = [0.0]
 
 
-    def add(self, new_data):
-        if len(self.buffer) < self.n_past:
-            self.buffer.append(new_data)
-        else:
-            self.buffer.pop(0)
-            self.buffer.append(new_data)
+#     def add(self, new_data):
+#         if len(self.buffer) < self.n_past:
+#             self.buffer.append(new_data)
+#         else:
+#             self.buffer.pop(0)
+#             self.buffer.append(new_data)
 
-    def avg(self):
-        return sum(self.buffer)/len(self.buffer)
+#     def avg(self):
+#         return sum(self.buffer)/len(self.buffer)
     
-    def get_last(self):
-        return self.buffer[len(self.buffer)-1]
+#     def get_last(self):
+#         return self.buffer[len(self.buffer)-1]
 
 
 
@@ -58,8 +58,9 @@ class SawyerMove:
 
         #self.yoyo_vel_sub = rospy.Subscriber('yoyo_vel', Float32, self.vel_callback)
         self.yoyo_state_sub = rospy.Subscriber('yoyo_state', YoyoState, self.state_callback)
-        self.last_yoyo_vels = MovingAverage('yoyo_vel', 5)
-        self.yoyo_vel = 0.0
+
+        self.yoyo_rot = 0.0
+        self.yoyo_rotvel = 0.0
         
         self.joint_state_sub = rospy.Subscriber('/robot/joint_states', JointState, self.jss_callback)
         self.joint_action_pub = rospy.Publisher('/robot/limb/right/joint_command', JointCommand, queue_size=10)
@@ -76,6 +77,7 @@ class SawyerMove:
 
         self.timer = time.time()
         self.move_mag = 1.0
+        self.torque_mag = 0.0
         self.vel_mag = 0.0
         self.yc = 0.4
         self.xc = 0.4
@@ -122,16 +124,11 @@ class SawyerMove:
 
 
     def state_callback(self, data):
-        temp_vel = data.yoyo_posvel
-        if abs(temp_vel - self.last_yoyo_vels.get_last()) > 2.0:
-            self.last_yoyo_vels.add(self.last_yoyo_vels.get_last())
-        else:
-            self.last_yoyo_vels.add(temp_vel)
-
-        self.yoyo_vel = self.last_yoyo_vels.avg()
+        self.yoyo_rot = data.yoyo_rot
+        self.yoyo_rotvel = data.yoyo_rotvel
 
     def control_callback(self, data):
-        ...#self.vel_mag = data.ee_z_vel
+        ...#self.torque_mag = data.ee_z_vel
 
 
     def jss_callback(self, data):
@@ -159,32 +156,18 @@ class SawyerMove:
             self.ee_z_pos = frame.p[2] + self.robot_origin_from_ground
 
 
-            if frame.p[2] > 0.75:
-                self.vel_mag = -0.25#-0.22
-            
-            if frame.p[2] < 0.60:
-                self.vel_mag = 0.25#0.22
 
-            # if yoyo vel > 0, ee_z_pos increase positive
-            # if self.yoyo_vel > 0:
-                
-            #     if abs(frame.p[2] - 0.80) > 0.01:
-            #         self.vel_mag = 0.35
-            #     else:
-            #         self.vel_mag = 0.0
-            # # if yoyo vel < 0, ee_z_pos decrease 
-            # if self.yoyo_vel < 0:
-            #     if abs(frame.p[2] - 0.60) > 0.01:
-            #         self.vel_mag = -0.25
-            #     else:
-            #         self.vel_mag = 0.0
-
-
-            if abs(frame.p[2] - 0.587) < 1e-2 and self.adjust == 0:
+            if frame.p[2] > 0.75 and self.adjust == 0:
                 self.adjust = 1
 
-            if abs(frame.p[2] - 0.587) > 1e-2:
+
+            if abs(frame.p[2] - 0.587) < 0.01:
                 self.adjust = 0
+            
+            # if frame.p[2] < 0.60:
+            #     self.torque_mag = 0.01#0.22
+
+
 
             jacobian = kdl.Jacobian(self.num_joints)
             self.jac_ee.JntToJac(self.joints, jacobian)
@@ -228,8 +211,8 @@ class SawyerMove:
     def loop(self):
         if self.start_flag:
 
-            if self.adjust != 1:
-
+            if self.adjust != 1 and self.yoyo_rot < 50 and self.yoyo_rotvel < 0.0:
+                self.vel_mag += self.torque_mag
                 inv_jac = np.linalg.pinv(self.jac_mat)
 
                 ee_vel_val = np.array([0.0, 0.0, self.vel_mag, 0.0, 0.0, 0.0]).reshape(-1,1)
@@ -240,29 +223,35 @@ class SawyerMove:
                 jc.names = self.joint_names
                 jc.velocity = joint_vel_val
                 self.joint_action_pub.publish(jc)   
-   
+
+ 
 
                 
 
             else:
-                print("adjustment")
-
+                self.vel_mag = 0.0
                 jc_pos = JointCommand()
                 jc_pos.mode = 1
-                jc_pos.names = ['right_j1', 'right_j5']
-                jc_pos.position = [np.deg2rad(-90), np.deg2rad(90)]
+                # jc_pos.names = ['right_j1', 'right_j5']
+                # jc_pos.position = [np.deg2rad(-90), np.deg2rad(90)]
+                a = np.deg2rad(-90)
+                b = np.deg2rad(90)
+                c = np.deg2rad(90)
+
+                goal_joints = [0.0, a, 0.0, b, 0.0, c, 1.70]
+                jc_pos.names = self.joint_names
+                jc_pos.position = goal_joints
                 self.joint_action_pub.publish(jc_pos)
 
 
-                self.adjust = 2
+                #self.adjust = 2
 
 
             robot_state = RobotState()
             robot_state.ee_z_pos = self.ee_z_pos
             robot_state.ee_z_vel = self.vel_mag
             self.robot_state_pub.publish(robot_state)
-            # self.ee_z_vel_pub.publish(Float32(self.vel_mag))
-            # self.ee_z_pos_pub.publish(Float32(self.ee_z_pos))
+
 
             if self.ee_z_pos > 1.40:
                 self.start_pub.publish(Int8(1))
@@ -323,25 +312,12 @@ def main():
                         gripper.open()
                         rospy.sleep(0.3)
                         gripper.close()
-                        #sm.vel_mag = 0.2
+                        sm.torque_mag = 0.0#0.07
 
             keys_pressed = pygame.key.get_pressed()
-            # if keys_pressed[pygame.K_w]:
-            #     print("move up")
-
-            #     #sm.move_up(jac_f)
-            #     sm.vel_mag += 0.2
-            # if keys_pressed[pygame.K_s]:
-            #     print("move_down")
-            #     sm.vel_mag -= 0.2
-                
-            #     #sm.move_down(jac_f)
-
-            # if keys_pressed[pygame.K_e]:
-            #     sm.vel_mag = -sm.vel_mag
 
             if keys_pressed[pygame.K_z]:
-                sm.vel_mag = 0.0
+                sm.torque_mag = 0.0
 
             sm.loop()
         r.sleep()

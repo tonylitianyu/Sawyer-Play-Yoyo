@@ -10,7 +10,7 @@
          command="load" />
 
 
-    <node name="sawyer" pkg="sawyer_move" type="sawyer_jac_move" output="screen" cwd="node" >
+    <node name="sawyer" pkg="sawyer_move" type="force_control" output="screen" cwd="node" >
       <remap from="joint_states" to="robot/joint_states"/> 
     </node>
     
