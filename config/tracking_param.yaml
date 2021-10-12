@@ -1,4 +1,8 @@
 #Tracking parameters
-axle_radius: 0.0055
-string_length: 1.0
+width: 720
+height: 300
+dis_per_pixel_eo: 0.002127659574468085
+dis_per_pixel_flir: 0.002127659574468085
+robot_origin_z_eo: 188.0
+robot_origin_z_flir: 188.0
 robot_origin_from_ground: 1.0

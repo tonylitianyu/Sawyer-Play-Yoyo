@@ -197,7 +197,6 @@ target_include_directories(${PROJECT_NAME}_tracking
 catkin_install_python(PROGRAMS
   nodes/joint_position_keyboard
   nodes/sawyer_jac_move
-  nodes/tracking
   nodes/collect_data
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

@@ -14,19 +14,26 @@ flir(Flir(0, width, height)),
 eo(EO(width, height)),
 backup(false),
 width(width),
-height(height)
+height(height),
+currCamName("eo")
 {
 }
 
 
 void cam::Camera::getNextFrame(cv::Mat &frame){
     if (backup){
+        currCamName = "flir";
         flir.getNextFrame(frame);
     }else{
+        currCamName = "eo";
         eo.getNextFrame(frame);
     }
 }
 
 void cam::Camera::switchCam(){
     backup = !backup;
+}
+
+string cam::Camera::getCurrCamName(){
+    return currCamName;
 }

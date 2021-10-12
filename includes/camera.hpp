@@ -33,12 +33,14 @@ namespace cam{
         public:
             Camera(int width, int height);
             void getNextFrame(Mat &frame);
+            string getCurrCamName();
             void switchCam();
 
 
         private:
             FLIR::Flir flir;
             UEYE::EO eo;
+            string currCamName;
             bool backup;
             int width, height;
 
