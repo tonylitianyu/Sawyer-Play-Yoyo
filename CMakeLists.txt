@@ -14,8 +14,25 @@ find_package(catkin REQUIRED COMPONENTS
     message_generation
 )
 
-find_package(Eigen3 REQUIRED)
 
+#System dependencies
+find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(aruco REQUIRED)
+
+find_path(Spinnaker_INCLUDE_DIR Spinnaker.h
+    PATHS /opt/spinnaker /usr /usr/local
+    PATH_SUFFIXES include)
+
+find_library(Spinnaker_LIBS NAMES Spinnaker
+    PATHS /opt/spinnaker /usr /usr/local
+    PATH_SUFFIXES lib)
+
+find_path(ueye_INCLUDE_DIR ueye.h
+    PATHS /usr/include)
+
+find_library(ueye_LIBS NAMES ueye_api
+    PATHS /usr/lib)  
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -124,6 +141,7 @@ include_directories(
 # include
     ${catkin_INCLUDE_DIRS}
     ${EIGEN_INCLUDE_DIRS}
+    includes
 )
 
 ## Declare a C++ library
@@ -140,20 +158,31 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_control src/control.cpp)
+add_executable(${PROJECT_NAME}_tracking src/tracking.cpp src/camera.cpp src/eo.cpp src/flir.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
 ## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
 set_target_properties(${PROJECT_NAME}_control PROPERTIES OUTPUT_NAME control PREFIX "")
+set_target_properties(${PROJECT_NAME}_tracking PROPERTIES OUTPUT_NAME tracking PREFIX "")
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(${PROJECT_NAME}_control ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_tracking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_control
-  ${catkin_LIBRARIES}
+  ${catkin_LIBRARIES} 
+)
+
+target_link_libraries(${PROJECT_NAME}_tracking
+  ${catkin_LIBRARIES} ${OpenCV_LIBS} ${Spinnaker_LIBS} aruco ${ueye_LIBS}
+)
+
+target_include_directories(${PROJECT_NAME}_tracking 
+  PUBLIC ${Spinnaker_INCLUDE_DIR} ${ueye_INCLUDE_DIR}
 )
 
 #############

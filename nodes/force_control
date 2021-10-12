@@ -23,31 +23,6 @@ import kdl_parser_py.urdf as kdl_parser
 
 import time
 
-# import intera_interface
-# import intera_external_devices
-
-# from intera_interface import CHECK_VERSION
-
-# class MovingAverage:
-#     def __init__(self, name, n_past) -> None:
-#         self.name = name
-#         self.n_past = n_past
-#         self.buffer = [0.0]
-
-
-#     def add(self, new_data):
-#         if len(self.buffer) < self.n_past:
-#             self.buffer.append(new_data)
-#         else:
-#             self.buffer.pop(0)
-#             self.buffer.append(new_data)
-
-#     def avg(self):
-#         return sum(self.buffer)/len(self.buffer)
-    
-#     def get_last(self):
-#         return self.buffer[len(self.buffer)-1]
-
 
 
 class SawyerMove:
@@ -176,13 +151,6 @@ class SawyerMove:
         
 
 
-    # def start_callback(self, emp):
-    #     self.start_flag = True
-        
-    #     return EmptyResponse()
-
-    
-
     def init_joints(self):
         if len(list(self.curr_joint_pos)) > 2:  #?????why would there be empty
             a = np.deg2rad(-90)
@@ -232,8 +200,7 @@ class SawyerMove:
                 self.vel_mag = 0.0
                 jc_pos = JointCommand()
                 jc_pos.mode = 1
-                # jc_pos.names = ['right_j1', 'right_j5']
-                # jc_pos.position = [np.deg2rad(-90), np.deg2rad(90)]
+
                 a = np.deg2rad(-90)
                 b = np.deg2rad(90)
                 c = np.deg2rad(90)
@@ -312,7 +279,7 @@ def main():
                         gripper.open()
                         rospy.sleep(0.3)
                         gripper.close()
-                        sm.torque_mag = 0.0#0.07
+                        sm.torque_mag = 0.10#0.07
 
             keys_pressed = pygame.key.get_pressed()
 

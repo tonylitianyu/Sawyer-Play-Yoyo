@@ -54,6 +54,40 @@ class DataProcessing:
 
         plt.show()
 
+    def compare(self, state1, state2):
+
+        fig, axs = plt.subplots(6)
+        t_step1, z_pos1, z_vel1, rot1, rot_vel1, ee_pos1, vel_input1 = self.extract_state(state1)
+        t_step2, z_pos2, z_vel2, rot2, rot_vel2, ee_pos2, vel_input2 = self.extract_state(state2)
+
+        index_step1 = range(len(z_pos1))
+        index_step2 = range(len(z_pos2))
+        axs[0].plot(index_step1, z_pos1)
+        axs[0].plot(index_step2, z_pos2)
+        axs[0].set_ylim([0.0,1.5])
+        axs[0].set_title('yoyo z pos')
+
+        axs[1].plot(index_step1, z_vel1)
+        axs[1].plot(index_step2, z_vel2)
+        axs[1].set_title('yoyo z vel')
+
+        axs[2].plot(index_step1, rot1)
+        axs[2].plot(index_step2, rot2)
+        axs[2].set_title('yoyo rotation')
+
+        axs[3].plot(index_step1, rot_vel1)
+        axs[3].plot(index_step2, rot_vel2)
+        axs[3].set_title('yoyo rot vel')
+
+        axs[4].plot(index_step1, ee_pos1)
+        axs[4].plot(index_step2, ee_pos2)
+        axs[4].set_title('ee z pos')
+
+        axs[5].plot(index_step1, vel_input1)
+        axs[5].plot(index_step2, vel_input2)
+        axs[5].set_title('input velocity')
+
+        plt.show()
         
 
     def process(self):
@@ -169,7 +203,20 @@ class DataProcessing:
 
 
 if __name__ == "__main__":
+    # date1 = sys.argv[1]
+    # date2 = sys.argv[2]
+    # dp1 = DataProcessing(0, date1)
+    # processed_state1 = dp1.process()
+
+    # dp2 = DataProcessing(0, date2)
+    # processed_state2 = dp2.process()
+    # dp1.compare(processed_state1, processed_state2)
+
+
+
     date = sys.argv[1]
+
+
     dp = DataProcessing(0, date)
     processed_state = dp.process()
 

@@ -1,14 +1,17 @@
 <launch>
-     <param name="robot_description" command="$(find xacro)/xacro --inorder $(find sawyer_description)/urdf/sawyer.urdf.xacro electric_gripper:=true" />
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find sawyer_description)/urdf/sawyer.urdf.xacro electric_gripper:=true" />
 
-     <rosparam
-         file="$(find sawyer_kdl)/config/saywer_kdl_params.yaml"
-         command="load" />
+    <rosparam
+        file="$(find sawyer_kdl)/config/saywer_kdl_params.yaml"
+        command="load" />
 
-     <rosparam
-         file="$(find sawyer_description)/params/named_poses.yaml"
-         command="load" />
+    <rosparam
+        file="$(find sawyer_description)/params/named_poses.yaml"
+        command="load" />
 
+    <rosparam command="load" file="$(find sawyer_move)/config/yoyo_param.yaml" />
+
+    <rosparam command="load" file="$(find sawyer_move)/config/tracking_param.yaml" />
 
     <node name="sawyer" pkg="sawyer_move" type="force_control" output="screen" cwd="node" >
       <remap from="joint_states" to="robot/joint_states"/> 

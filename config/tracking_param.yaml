@@ -1,0 +1,4 @@
+#Tracking parameters
+axle_radius: 0.0055
+string_length: 1.0
+robot_origin_from_ground: 1.0

@@ -99,7 +99,9 @@ mapx, mapy = cv2.initUndistortRectifyMap(mtx, dist, None, newcamera, (width, hei
 iter = 0
 #file = open("yoyo_pos.txt","w")
 #start = time.time()
+
 while True:
+    start = time.time()
     ret, frame = cap.read()
 
     # frame.setflags(write=1)
@@ -122,15 +124,16 @@ while True:
     # print("yoyo_center ", yoyo_center)
     #print("robot_origin ", robot_origin)
 
-    cv2.imshow('img', frame)
-    key = cv2.waitKey(30)
-    if key == ord("q"):
-        break
+    #cv2.imshow('img', frame)
+    # key = cv2.waitKey(30)
+    # if key == ord("q"):
+    #     break
     # im = Image.fromarray(frame)
     # im.save("frames/"+str(iter)+".png")
 
 
     iter += 1
+    print(1/(time.time() - start))
 
 print(iter)
 file.close()
