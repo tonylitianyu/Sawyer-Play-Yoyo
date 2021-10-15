@@ -31,16 +31,18 @@ namespace cam{
 
     class Camera{
         public:
-            Camera(int width, int height);
+            Camera(int width, int height, double eo_dis, double flir_dis, double eo_height, double flir_height);
             void getNextFrame(Mat &frame);
-            string getCurrCamName();
             void switchCam();
+            void getKinv(Mat &Kinverse);
+            double getDistance();
+            string getCurrCamName();
+            double getGroundHeight();
 
 
         private:
             FLIR::Flir flir;
             UEYE::EO eo;
-            string currCamName;
             bool backup;
             int width, height;
 

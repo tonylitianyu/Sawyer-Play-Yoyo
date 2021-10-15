@@ -15,9 +15,12 @@
 namespace UEYE{
     class EO{
         public:
-            EO(int width, int height);
+            EO(int width, int height, double dis, double ground_height);
             ~EO();
             void getNextFrame(cv::Mat & frame);
+            void getKinv(cv::Mat & Kinverse);
+            double getDistance();
+            double getGroundHeight();
 
         private:
             HIDS hCam = 1;
@@ -25,6 +28,9 @@ namespace UEYE{
             int memID = 0;
             cv::Mat map1, map2;
             int width, height;
+            cv::Mat Kinv;
+            double dis;
+            double ground_height;
 
             void createUndistortMap();
     };

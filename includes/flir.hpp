@@ -20,9 +20,12 @@ namespace FLIR{
     class Flir
     {
         public:
-            Flir(int index,int width, int height);
+            Flir(int index,int width, int height, double dis, double ground_height);
             ~Flir();
             void getNextFrame(cv::Mat & frame);
+            void getKinv(cv::Mat & Kinverse);
+            double getDistance();
+            double getGroundHeight();
 
         private:
             CameraPtr pCam = nullptr;
@@ -30,6 +33,9 @@ namespace FLIR{
             SystemPtr system;
             cv::Mat map1, map2;
             int width, height;
+            cv::Mat Kinv;
+            double dis;
+            double ground_height;
 
             void createUndistortMap();
 

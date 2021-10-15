@@ -6,3 +6,7 @@ dis_per_pixel_flir: 0.002127659574468085
 robot_origin_z_eo: 188.0
 robot_origin_z_flir: 188.0
 robot_origin_from_ground: 1.0
+eo_height: 0.80
+flir_height: 0.80
+eo_dis: 1.7018
+flir_dis: 1.1938

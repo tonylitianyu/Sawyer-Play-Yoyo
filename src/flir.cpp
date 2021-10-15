@@ -17,9 +17,11 @@ using namespace FLIR;
 using namespace std;
 using namespace cv;
 
-Flir::Flir(int index, int width, int height) : 
+Flir::Flir(int index, int width, int height, double dis, double ground_height) : 
 width(width),
-height(height)
+height(height),
+dis(dis),
+ground_height(ground_height)
 {
     pCam = nullptr;
     system = System::GetInstance();
@@ -78,4 +80,19 @@ void Flir::createUndistortMap(){
     
     cv::initUndistortRectifyMap(K, D, 
                         Mat_<double>::eye(3,3), K, cv::Size(height,width), CV_8UC1, map1, map2 );
+    Kinv = K.inv();
+    Kinv.convertTo(Kinv, CV_64FC1);
+}
+
+void Flir::getKinv(cv::Mat & Kinverse){
+    Kinverse = Kinv;
+}
+
+
+double Flir::getDistance(){
+    return dis;
+}
+
+double Flir::getGroundHeight(){
+    return ground_height;
 }

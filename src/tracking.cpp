@@ -11,11 +11,12 @@
 #include <ctime> 
 #include <aruco/aruco.h>
 #include "camera.hpp"
-
+#include <opencv2/opencv.hpp>
 
 using namespace Eigen;
 using namespace cam;
 using namespace std;
+using namespace cv;
 
 class MovingAverage
 {
@@ -65,8 +66,7 @@ class Tracking
 
         double ee_z_pos;
         double robot_origin_from_ground;
-        double dis_per_pixel_eo;
-        double dis_per_pixel_flir;
+
         double robot_origin_z_eo;
         double robot_origin_z_flir;
         MovingAverage last_yoyo_z_dis;
@@ -79,11 +79,11 @@ class Tracking
         aruco::MarkerDetector MDetector;
     public:
         Tracking(ros::NodeHandle nh, int width, int height, double robot_origin_from_ground, 
-        double dis_per_pixel_eo, double dis_per_pixel_flir, double robot_origin_z_eo, double robot_origin_z_flir) : 
+        double eo_height, double flir_height, double eo_dis, double flir_dis, double robot_origin_z_eo, double robot_origin_z_flir) : 
         timer(nh.createTimer(ros::Duration((1.0/100.0)), &Tracking::main_loop, this)),
         width(width),
         height(height),
-        camera(cam::Camera(width, height)),
+        camera(cam::Camera(width, height, eo_dis, flir_dis, eo_height, flir_height)),
         yoyo_state_pub(nh.advertise<sawyer_move::YoyoState>("yoyo_state", 1000, true)),
         robot_state_sub(nh.subscribe("robot_state", 1000, &Tracking::robot_state_callback, this)),
         last_yoyo_z_dis(MovingAverage("z_dis", 10, 1.00)),
@@ -91,8 +91,6 @@ class Tracking
         last_tracking_time(std::chrono::system_clock::now()),
         ee_z_pos(1.55),
         robot_origin_from_ground(robot_origin_from_ground),
-        dis_per_pixel_eo(dis_per_pixel_eo),
-        dis_per_pixel_flir(dis_per_pixel_flir),
         robot_origin_z_eo(robot_origin_z_eo),
         robot_origin_z_flir(robot_origin_z_flir)
         {
@@ -108,7 +106,9 @@ class Tracking
         /// \brief The main control loop state machine
         void main_loop(const ros::TimerEvent &){
             cv::Mat frame(height, width, CV_8UC1);
+            cv::Mat Kinv;
             camera.getNextFrame(frame);
+            camera.getKinv(Kinv);
 
             vector<aruco::Marker> markers = MDetector.detect(frame);
             if (markers.size() == 0){
@@ -118,50 +118,62 @@ class Tracking
                 for(size_t i=0;i<markers.size();i++){
                     markers[i].draw(frame);
                     Point2f cent = markers[i].getCenter();
-                    cout << cent << endl;
+                    //cout << cent << endl;
+
+                    Mat worldCord = (Mat_<double>(3,1) << cent.x, cent.y, 1.0);
+                    worldCord.convertTo(worldCord, CV_64FC1);
+                    worldCord = Kinv*worldCord;
+                    worldCord *= camera.getDistance(); //1.0414
+                    worldCord.at<double>(0,1) = camera.getGroundHeight() - worldCord.at<double>(0,1);
+                    cout << worldCord.at<double>(0,1) << endl;
                 }
 
 
                 string currCamName = camera.getCurrCamName();
-                double dis_per_pixel;
-                double robot_origin_z;
-                if (currCamName == "eo"){
-                    dis_per_pixel = dis_per_pixel_eo;
-                    robot_origin_z = robot_origin_z_eo;
-                }else{
-                    dis_per_pixel = dis_per_pixel_flir;
-                    robot_origin_z = robot_origin_z_flir;
-                }
+                cout << currCamName << endl;
+                // double dis_per_pixel;
+                // double robot_origin_z;
+                // if (currCamName == "eo"){
+                //     dis_per_pixel = dis_per_pixel_eo;
+                //     robot_origin_z = robot_origin_z_eo;
+                // }else{
+                //     dis_per_pixel = dis_per_pixel_flir;
+                //     robot_origin_z = robot_origin_z_flir;
+                // }
 
 
-                //yoyo dis from ground
-                double yoyo_z_dis = robot_origin_from_ground - (cent.y * dis_per_pixel) + (robot_origin_z*dis_per_pixel);
-                double yoyo_rot = (yoyo_z_dis - ee_z_pos + 1.0)/0.0055;
+                // //yoyo dis from ground
+                // double yoyo_z_dis = robot_origin_from_ground - (cent.y * dis_per_pixel) + (robot_origin_z*dis_per_pixel);
+                // double yoyo_rot = (yoyo_z_dis - ee_z_pos + 1.0)/0.0055;
 
                 
-                double last_yoyo_z_dis_avg = last_yoyo_z_dis.avg();
-                double last_yoyo_rot_avg = last_yoyo_rot.avg();
+                // double last_yoyo_z_dis_avg = last_yoyo_z_dis.avg();
+                // double last_yoyo_rot_avg = last_yoyo_rot.avg();
 
-                last_yoyo_z_dis.add(yoyo_z_dis);
-                last_yoyo_rot.add(yoyo_rot);
+                // last_yoyo_z_dis.add(yoyo_z_dis);
+                // last_yoyo_rot.add(yoyo_rot);
 
-                auto curr_time = std::chrono::system_clock::now();
-                double elapsed_seconds = (curr_time-last_tracking_time).count();
+                // auto curr_time = std::chrono::system_clock::now();
+                // double elapsed_seconds = (curr_time-last_tracking_time).count();
 
-                double yoyo_z_vel = (last_yoyo_z_dis.avg() - last_yoyo_z_dis_avg)/elapsed_seconds;
-                double yoyo_rot_vel = (last_yoyo_rot.avg() - last_yoyo_rot_avg)/elapsed_seconds;
-
-
-                sawyer_move::YoyoState yoyo_state;
-                yoyo_state.yoyo_pos = yoyo_z_dis;
-                yoyo_state.yoyo_posvel = yoyo_z_vel;
-                yoyo_state.yoyo_rot = yoyo_rot;
-                yoyo_state.yoyo_rotvel = yoyo_rot_vel;
-                yoyo_state_pub.publish(yoyo_state);
+                // double yoyo_z_vel = (last_yoyo_z_dis.avg() - last_yoyo_z_dis_avg)/elapsed_seconds;
+                // double yoyo_rot_vel = (last_yoyo_rot.avg() - last_yoyo_rot_avg)/elapsed_seconds;
 
 
-                auto last_tracking_time = curr_time;
+                // sawyer_move::YoyoState yoyo_state;
+                // yoyo_state.yoyo_pos = yoyo_z_dis;
+                // yoyo_state.yoyo_posvel = yoyo_z_vel;
+                // yoyo_state.yoyo_rot = yoyo_rot;
+                // yoyo_state.yoyo_rotvel = yoyo_rot_vel;
+                // yoyo_state_pub.publish(yoyo_state);
+
+
+                // auto last_tracking_time = curr_time;
             }
+
+            // cv::namedWindow("current Image", cv::WINDOW_AUTOSIZE);
+            // cv::imshow("current Image", frame);
+            // int key = (cv::waitKey(1) & 0xFF);//otherwise the image will not display...
 
         }
 
@@ -187,21 +199,25 @@ int main(int argc, char **argv)
     int width;
     int height;
     double robot_origin_from_ground; //in meter
-    double dis_per_pixel_eo;
-    double dis_per_pixel_flir;
+    double eo_height;
+    double flir_height;
+    double eo_dis;
+    double flir_dis;
     double robot_origin_z_eo; //robot origin pixel within the camera
     double robot_origin_z_flir;
 
     loadROSParam<int>(n, "width", width);
     loadROSParam<int>(n, "height", height);
     loadROSParam<double>(n, "robot_origin_from_ground", robot_origin_from_ground);
-    loadROSParam<double>(n, "dis_per_pixel_eo", dis_per_pixel_eo);
-    loadROSParam<double>(n, "dis_per_pixel_flir", dis_per_pixel_flir);
+    loadROSParam<double>(n, "eo_height", eo_height);
+    loadROSParam<double>(n, "flir_height", flir_height);
+    loadROSParam<double>(n, "eo_dis", eo_dis);
+    loadROSParam<double>(n, "flir_dis", flir_dis);
     loadROSParam<double>(n, "robot_origin_z_eo", robot_origin_z_eo);
     loadROSParam<double>(n, "robot_origin_z_flir", robot_origin_z_flir);
 
     Tracking tracking = Tracking(n, width, height, robot_origin_from_ground, 
-                                        dis_per_pixel_eo, dis_per_pixel_flir,
+                                        eo_height, flir_height, eo_dis, flir_dis,
                                         robot_origin_z_eo, robot_origin_z_flir);
     ros::spin();
 

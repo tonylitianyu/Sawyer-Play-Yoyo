@@ -14,9 +14,11 @@ using namespace UEYE;
 using namespace std;
 using namespace cv;
 
-EO::EO(int width, int height) : 
+EO::EO(int width, int height, double dis, double ground_height) : 
 width(width),
-height(height)
+height(height),
+dis(dis),
+ground_height(ground_height)
 {
     cout << "Launching EO camera" << endl;
     INT init_ret = is_InitCamera(&hCam, 0);
@@ -67,8 +69,6 @@ void EO::getNextFrame(cv::Mat & frame){
 
 }    
 
-
-
 EO::~EO(){
     is_FreeImageMem(hCam, pMem, memID);
 }
@@ -86,4 +86,19 @@ void EO::createUndistortMap(){
     
     cv::initUndistortRectifyMap(K, D, 
                         Mat_<double>::eye(3,3), K, cv::Size(height,width), CV_8UC1, map1, map2 );
+
+    Kinv = K.inv();
+    Kinv.convertTo(Kinv, CV_64FC1);
+}
+
+void EO::getKinv(cv::Mat & Kinverse){
+    Kinverse = Kinv;
+}
+
+double EO::getDistance(){
+    return dis;
+}
+
+double EO::getGroundHeight(){
+    return ground_height;
 }
