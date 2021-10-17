@@ -9,9 +9,25 @@
 #include <fstream>
 #include <chrono>
 #include <ctime> 
-#include <aruco/aruco.h>
 #include "camera.hpp"
 #include <opencv2/opencv.hpp>
+
+#include <stdio.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <ctype.h>
+#include <unistd.h>
+#include <math.h>
+
+#include "apriltag.h"
+#include "tag25h9.h"
+
+
+#include "common/getopt.h"
+#include "common/image_u8.h"
+#include "common/image_u8x4.h"
+#include "common/pjpeg.h"
+#include "common/zarray.h"
 
 using namespace Eigen;
 using namespace cam;
@@ -22,18 +38,24 @@ class MovingAverage
 {
     private:
         int n_past;
+        double cap_val;
         std::string name;
         std::deque<float> buffer;
 
     public:
-        MovingAverage(const std::string name, const int n_past, double init_val) : 
+        MovingAverage(const std::string name, const int n_past, double init_val, double cap_val) : 
         n_past(n_past),
-        name(name)
+        name(name),
+        cap_val(cap_val)
         {
             buffer.push_back(init_val);
         }
 
         void add(float new_data){
+            if (new_data > cap_val){
+                new_data = get_last();
+            }
+
             if (buffer.size() < n_past){
                 buffer.push_back(new_data);
             }else{
@@ -76,7 +98,13 @@ class Tracking
         int width;
         int height;
         cam::Camera camera;
-        aruco::MarkerDetector MDetector;
+
+        apriltag_family_t *tf_eo;
+        apriltag_detector_t *td_eo;
+        apriltag_family_t *tf_flir;
+        apriltag_detector_t *td_flir;
+
+
     public:
         Tracking(ros::NodeHandle nh, int width, int height, double robot_origin_from_ground, 
         double eo_height, double flir_height, double eo_dis, double flir_dis, double robot_origin_z_eo, double robot_origin_z_flir) : 
@@ -86,26 +114,41 @@ class Tracking
         camera(cam::Camera(width, height, eo_dis, flir_dis, eo_height, flir_height)),
         yoyo_state_pub(nh.advertise<sawyer_move::YoyoState>("yoyo_state", 1000, true)),
         robot_state_sub(nh.subscribe("robot_state", 1000, &Tracking::robot_state_callback, this)),
-        last_yoyo_z_dis(MovingAverage("z_dis", 10, 1.00)),
-        last_yoyo_rot(MovingAverage("rot", 10, 1.00*0.0055)),
+        last_yoyo_z_dis(MovingAverage("z_dis", 10, 1.00, 1.0)),
+        last_yoyo_rot(MovingAverage("rot", 10, 1.00*0.0055, 100.0)),
         last_tracking_time(std::chrono::system_clock::now()),
         ee_z_pos(1.55),
         robot_origin_from_ground(robot_origin_from_ground),
         robot_origin_z_eo(robot_origin_z_eo),
         robot_origin_z_flir(robot_origin_z_flir)
         {
-            MDetector.setDictionary("ARUCO_MIP_16h3");
-            MDetector.setDetectionMode(aruco::DM_FAST, 0.02);
+            tf_eo = tag25h9_create();
+            td_eo = apriltag_detector_create();
+            apriltag_detector_add_family(td_eo,tf_eo);
+            td_eo->nthreads = 10;
+            td_eo->quad_decimate = 1.0;//2.0;
+            // td_eo->refine_edges = 1;
+            // td_eo->decode_sharpening = 1.0;
+
+            tf_flir = tag25h9_create();
+            td_flir = apriltag_detector_create();
+            apriltag_detector_add_family(td_flir,tf_flir);
+            td_flir->nthreads = 10;
+            td_flir->quad_decimate = 1.0;//1.5;
+            // td_flir->refine_edges = 1;
+            // td_flir->decode_sharpening = 1.0;
         }
 
         void robot_state_callback(const sawyer_move::RobotState & state_data){
             ee_z_pos = state_data.ee_z_pos;
-
         }
 
         /// \brief The main control loop state machine
         void main_loop(const ros::TimerEvent &){
-            // auto start = std::chrono::system_clock::now();
+            //auto start = std::chrono::system_clock::now();
+            double yoyo_z_dis;
+
+
             cv::Mat eo_frame(height, width, CV_8UC1);
             camera.eo.getNextFrame(eo_frame);
 
@@ -113,87 +156,81 @@ class Tracking
             cv::Mat flir_frame(height, width, CV_8UC1);
             camera.flir.getNextFrame(flir_frame);
 
+            image_u8_t img_header = {
+                .width = eo_frame.cols,
+                .height = eo_frame.rows,
+                .stride = eo_frame.cols,
+                .buf = eo_frame.data
+            };
 
-            vector<aruco::Marker> eo_markers = MDetector.detect(eo_frame);
-            vector<aruco::Marker> flir_markers = MDetector.detect(flir_frame);
+            zarray_t * detections = apriltag_detector_detect(td_eo, &img_header);
+            cv::Mat eo_Kinv;
+            camera.eo.getKinv(eo_Kinv);
+            if (zarray_size(detections) > 0){
+                        // Draw detection outlines
+                for (int i = 0; i < zarray_size(detections); i++) {
+                    apriltag_detection_t *det;
+                    zarray_get(detections, i, &det);
 
-            if ((eo_markers.size() == 0) && (flir_markers.size() == 0)){
-                cout << "i'm blind" << endl;
-                return;
-            }
-            cv::Mat frame(height, width, CV_8UC1);
-            cv::Mat Kinv;
-            double yoyo_z_dis;
-            if (eo_markers.size() >= flir_markers.size()){
-                frame = eo_frame;
-                camera.eo.getKinv(Kinv);
-                Point2f cent;
-                //double yoyo_z_dis;
-                for(size_t i=0;i<eo_markers.size();i++){
-                    eo_markers[i].draw(frame);
-                    Point2f cent = eo_markers[i].getCenter();
-                    //cout << cent << endl;
-
-                    Mat worldCord = (Mat_<double>(3,1) << cent.x, cent.y, 1.0);
+                    Mat worldCord = (Mat_<double>(3,1) << det->c[0], det->c[1], 1.0);
                     worldCord.convertTo(worldCord, CV_64FC1);
-                    worldCord = Kinv*worldCord;
+                    worldCord = eo_Kinv*worldCord;
                     worldCord *= camera.eo.getDistance(); //1.0414
                     yoyo_z_dis = camera.eo.getGroundHeight() - worldCord.at<double>(0,1);
-                    cout << yoyo_z_dis << endl;
-                    //cout << worldCord.at<double>(0,1) << endl;
+                    cout << "eo " << yoyo_z_dis << " based on " << det->c[0] << " " << det->c[1] << endl;
                 }
+                zarray_destroy(detections);
+                // imshow("Tag Detections", eo_frame);
+                // int key = (cv::waitKey(1) & 0xFF);
             }else{
-                frame = flir_frame;
-                camera.flir.getKinv(Kinv);
-                Point2f cent;
-                //double yoyo_z_dis;
-                for(size_t i=0;i<flir_markers.size();i++){
-                    flir_markers[i].draw(frame);
-                    Point2f cent = flir_markers[i].getCenter();
-                    //cout << cent << endl;
+                image_u8_t flir_img_header = {
+                    .width = flir_frame.cols,
+                    .height = flir_frame.rows,
+                    .stride = flir_frame.cols,
+                    .buf = flir_frame.data
+                };
+                zarray_t * flir_detections = apriltag_detector_detect(td_flir, &flir_img_header);
+                        // Draw detection outlines
+                cv::Mat flir_Kinv;
+                camera.flir.getKinv(flir_Kinv);
+                for (int i = 0; i < zarray_size(flir_detections); i++) {
+                    apriltag_detection_t *det;
+                    zarray_get(flir_detections, i, &det);
 
-                    Mat worldCord = (Mat_<double>(3,1) << cent.x, cent.y, 1.0);
+                    Mat worldCord = (Mat_<double>(3,1) << det->c[0], det->c[1], 1.0);
                     worldCord.convertTo(worldCord, CV_64FC1);
-                    worldCord = Kinv*worldCord;
+                    worldCord = flir_Kinv*worldCord;
                     worldCord *= camera.flir.getDistance(); //1.0414
                     yoyo_z_dis = camera.flir.getGroundHeight() - worldCord.at<double>(0,1);
-                    cout << yoyo_z_dis << endl;
-                    //cout << worldCord.at<double>(0,1) << endl;
+                    cout << "flir "<<yoyo_z_dis << " based on " << det->c[0] << " " << det->c[1] << endl;
+
                 }
+                zarray_destroy(flir_detections);
+                // imshow("Tag Detections", flir_frame);
+                // int key = (cv::waitKey(1) & 0xFF);
             }
+
             
-
-
-
-            //string currCamName = camera.getCurrCamName();
-            
-            //cout << currCamName << endl;
-            // double dis_per_pixel;
-            // double robot_origin_z;
-            // if (currCamName == "eo"){
-            //     dis_per_pixel = dis_per_pixel_eo;
-            //     robot_origin_z = robot_origin_z_eo;
-            // }else{
-            //     dis_per_pixel = dis_per_pixel_flir;
-            //     robot_origin_z = robot_origin_z_flir;
-            // }
 
 
             // //yoyo dis from ground
             // double yoyo_z_dis = robot_origin_from_ground - (cent.y * dis_per_pixel) + (robot_origin_z*dis_per_pixel);
-            double yoyo_rot = (yoyo_z_dis - ee_z_pos + 1.0)/0.0055;
+            
 
             
             double last_yoyo_z_dis_avg = last_yoyo_z_dis.avg();
             double last_yoyo_rot_avg = last_yoyo_rot.avg();
 
             last_yoyo_z_dis.add(yoyo_z_dis);
+
+            double yoyo_rot = (last_yoyo_z_dis.avg() - ee_z_pos + 1.0)/0.0055;
             last_yoyo_rot.add(yoyo_rot);
 
             auto curr_time = std::chrono::system_clock::now();
-            double elapsed_seconds = (curr_time-last_tracking_time).count();
+            double elapsed_seconds = std::chrono::duration_cast<std::chrono::milliseconds>(curr_time-last_tracking_time).count()/1000.0;
 
             double yoyo_z_vel = (last_yoyo_z_dis.avg() - last_yoyo_z_dis_avg)/elapsed_seconds;
+
             double yoyo_rot_vel = (last_yoyo_rot.avg() - last_yoyo_rot_avg)/elapsed_seconds;
 
 
@@ -205,12 +242,10 @@ class Tracking
             yoyo_state_pub.publish(yoyo_state);
 
 
-            auto last_tracking_time = curr_time;
+            last_tracking_time = curr_time;
             
 
-            cv::namedWindow("current Image", cv::WINDOW_AUTOSIZE);
-            cv::imshow("current Image", frame);
-            int key = (cv::waitKey(1) & 0xFF);//otherwise the image will not display...
+
             // auto end = std::chrono::system_clock::now();
 
             // std::chrono::duration<double> elapsed_seconds = end-start;
