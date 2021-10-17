@@ -38,11 +38,12 @@ namespace cam{
             double getDistance();
             string getCurrCamName();
             double getGroundHeight();
+            FLIR::Flir flir;
+            UEYE::EO eo;
 
 
         private:
-            FLIR::Flir flir;
-            UEYE::EO eo;
+
             bool backup;
             int width, height;
 

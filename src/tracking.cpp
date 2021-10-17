@@ -80,7 +80,7 @@ class Tracking
     public:
         Tracking(ros::NodeHandle nh, int width, int height, double robot_origin_from_ground, 
         double eo_height, double flir_height, double eo_dis, double flir_dis, double robot_origin_z_eo, double robot_origin_z_flir) : 
-        timer(nh.createTimer(ros::Duration((1.0/100.0)), &Tracking::main_loop, this)),
+        timer(nh.createTimer(ros::Duration((1.0/200.0)), &Tracking::main_loop, this)),
         width(width),
         height(height),
         camera(cam::Camera(width, height, eo_dis, flir_dis, eo_height, flir_height)),
@@ -105,76 +105,119 @@ class Tracking
 
         /// \brief The main control loop state machine
         void main_loop(const ros::TimerEvent &){
+            // auto start = std::chrono::system_clock::now();
+            cv::Mat eo_frame(height, width, CV_8UC1);
+            camera.eo.getNextFrame(eo_frame);
+
+
+            cv::Mat flir_frame(height, width, CV_8UC1);
+            camera.flir.getNextFrame(flir_frame);
+
+
+            vector<aruco::Marker> eo_markers = MDetector.detect(eo_frame);
+            vector<aruco::Marker> flir_markers = MDetector.detect(flir_frame);
+
+            if ((eo_markers.size() == 0) && (flir_markers.size() == 0)){
+                cout << "i'm blind" << endl;
+                return;
+            }
             cv::Mat frame(height, width, CV_8UC1);
             cv::Mat Kinv;
-            camera.getNextFrame(frame);
-            camera.getKinv(Kinv);
-
-            vector<aruco::Marker> markers = MDetector.detect(frame);
-            if (markers.size() == 0){
-                camera.switchCam(); //give up on this frame and switch to another camera the next frame
-            }else{
+            double yoyo_z_dis;
+            if (eo_markers.size() >= flir_markers.size()){
+                frame = eo_frame;
+                camera.eo.getKinv(Kinv);
                 Point2f cent;
-                for(size_t i=0;i<markers.size();i++){
-                    markers[i].draw(frame);
-                    Point2f cent = markers[i].getCenter();
+                //double yoyo_z_dis;
+                for(size_t i=0;i<eo_markers.size();i++){
+                    eo_markers[i].draw(frame);
+                    Point2f cent = eo_markers[i].getCenter();
                     //cout << cent << endl;
 
                     Mat worldCord = (Mat_<double>(3,1) << cent.x, cent.y, 1.0);
                     worldCord.convertTo(worldCord, CV_64FC1);
                     worldCord = Kinv*worldCord;
-                    worldCord *= camera.getDistance(); //1.0414
-                    worldCord.at<double>(0,1) = camera.getGroundHeight() - worldCord.at<double>(0,1);
-                    cout << worldCord.at<double>(0,1) << endl;
+                    worldCord *= camera.eo.getDistance(); //1.0414
+                    yoyo_z_dis = camera.eo.getGroundHeight() - worldCord.at<double>(0,1);
+                    cout << yoyo_z_dis << endl;
+                    //cout << worldCord.at<double>(0,1) << endl;
                 }
+            }else{
+                frame = flir_frame;
+                camera.flir.getKinv(Kinv);
+                Point2f cent;
+                //double yoyo_z_dis;
+                for(size_t i=0;i<flir_markers.size();i++){
+                    flir_markers[i].draw(frame);
+                    Point2f cent = flir_markers[i].getCenter();
+                    //cout << cent << endl;
 
-
-                string currCamName = camera.getCurrCamName();
-                cout << currCamName << endl;
-                // double dis_per_pixel;
-                // double robot_origin_z;
-                // if (currCamName == "eo"){
-                //     dis_per_pixel = dis_per_pixel_eo;
-                //     robot_origin_z = robot_origin_z_eo;
-                // }else{
-                //     dis_per_pixel = dis_per_pixel_flir;
-                //     robot_origin_z = robot_origin_z_flir;
-                // }
-
-
-                // //yoyo dis from ground
-                // double yoyo_z_dis = robot_origin_from_ground - (cent.y * dis_per_pixel) + (robot_origin_z*dis_per_pixel);
-                // double yoyo_rot = (yoyo_z_dis - ee_z_pos + 1.0)/0.0055;
-
-                
-                // double last_yoyo_z_dis_avg = last_yoyo_z_dis.avg();
-                // double last_yoyo_rot_avg = last_yoyo_rot.avg();
-
-                // last_yoyo_z_dis.add(yoyo_z_dis);
-                // last_yoyo_rot.add(yoyo_rot);
-
-                // auto curr_time = std::chrono::system_clock::now();
-                // double elapsed_seconds = (curr_time-last_tracking_time).count();
-
-                // double yoyo_z_vel = (last_yoyo_z_dis.avg() - last_yoyo_z_dis_avg)/elapsed_seconds;
-                // double yoyo_rot_vel = (last_yoyo_rot.avg() - last_yoyo_rot_avg)/elapsed_seconds;
-
-
-                // sawyer_move::YoyoState yoyo_state;
-                // yoyo_state.yoyo_pos = yoyo_z_dis;
-                // yoyo_state.yoyo_posvel = yoyo_z_vel;
-                // yoyo_state.yoyo_rot = yoyo_rot;
-                // yoyo_state.yoyo_rotvel = yoyo_rot_vel;
-                // yoyo_state_pub.publish(yoyo_state);
-
-
-                // auto last_tracking_time = curr_time;
+                    Mat worldCord = (Mat_<double>(3,1) << cent.x, cent.y, 1.0);
+                    worldCord.convertTo(worldCord, CV_64FC1);
+                    worldCord = Kinv*worldCord;
+                    worldCord *= camera.flir.getDistance(); //1.0414
+                    yoyo_z_dis = camera.flir.getGroundHeight() - worldCord.at<double>(0,1);
+                    cout << yoyo_z_dis << endl;
+                    //cout << worldCord.at<double>(0,1) << endl;
+                }
             }
+            
 
-            // cv::namedWindow("current Image", cv::WINDOW_AUTOSIZE);
-            // cv::imshow("current Image", frame);
-            // int key = (cv::waitKey(1) & 0xFF);//otherwise the image will not display...
 
+
+            //string currCamName = camera.getCurrCamName();
+            
+            //cout << currCamName << endl;
+            // double dis_per_pixel;
+            // double robot_origin_z;
+            // if (currCamName == "eo"){
+            //     dis_per_pixel = dis_per_pixel_eo;
+            //     robot_origin_z = robot_origin_z_eo;
+            // }else{
+            //     dis_per_pixel = dis_per_pixel_flir;
+            //     robot_origin_z = robot_origin_z_flir;
+            // }
+
+
+            // //yoyo dis from ground
+            // double yoyo_z_dis = robot_origin_from_ground - (cent.y * dis_per_pixel) + (robot_origin_z*dis_per_pixel);
+            double yoyo_rot = (yoyo_z_dis - ee_z_pos + 1.0)/0.0055;
+
+            
+            double last_yoyo_z_dis_avg = last_yoyo_z_dis.avg();
+            double last_yoyo_rot_avg = last_yoyo_rot.avg();
+
+            last_yoyo_z_dis.add(yoyo_z_dis);
+            last_yoyo_rot.add(yoyo_rot);
+
+            auto curr_time = std::chrono::system_clock::now();
+            double elapsed_seconds = (curr_time-last_tracking_time).count();
+
+            double yoyo_z_vel = (last_yoyo_z_dis.avg() - last_yoyo_z_dis_avg)/elapsed_seconds;
+            double yoyo_rot_vel = (last_yoyo_rot.avg() - last_yoyo_rot_avg)/elapsed_seconds;
+
+
+            sawyer_move::YoyoState yoyo_state;
+            yoyo_state.yoyo_pos = yoyo_z_dis;
+            yoyo_state.yoyo_posvel = yoyo_z_vel;
+            yoyo_state.yoyo_rot = yoyo_rot;
+            yoyo_state.yoyo_rotvel = yoyo_rot_vel;
+            yoyo_state_pub.publish(yoyo_state);
+
+
+            auto last_tracking_time = curr_time;
+            
+
+            cv::namedWindow("current Image", cv::WINDOW_AUTOSIZE);
+            cv::imshow("current Image", frame);
+            int key = (cv::waitKey(1) & 0xFF);//otherwise the image will not display...
+            // auto end = std::chrono::system_clock::now();
+
+            // std::chrono::duration<double> elapsed_seconds = end-start;
+            // std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+
+            // std::cout << "finished computation at " << std::ctime(&end_time)
+            //         << "elapsed time: " << 1/(elapsed_seconds.count()) << "hz\n";
         }
 
 };

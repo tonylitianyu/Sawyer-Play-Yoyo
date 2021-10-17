@@ -279,7 +279,7 @@ def main():
                         gripper.open()
                         rospy.sleep(0.3)
                         gripper.close()
-                        sm.torque_mag = 0.10#0.07
+                        sm.torque_mag = 0.0#0.07
 
             keys_pressed = pygame.key.get_pressed()
 

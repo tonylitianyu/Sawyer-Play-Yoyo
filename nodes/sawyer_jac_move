@@ -323,7 +323,7 @@ def main():
                         gripper.open()
                         rospy.sleep(0.3)
                         gripper.close()
-                        #sm.vel_mag = 0.2
+                        #sm.vel_mag = 0.0
 
             keys_pressed = pygame.key.get_pressed()
             # if keys_pressed[pygame.K_w]:

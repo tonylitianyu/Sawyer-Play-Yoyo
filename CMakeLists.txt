@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(aruco REQUIRED)
+find_package(apriltag REQUIRED)
 
 find_path(Spinnaker_INCLUDE_DIR Spinnaker.h
     PATHS /opt/spinnaker /usr /usr/local
@@ -178,7 +179,7 @@ target_link_libraries(${PROJECT_NAME}_control
 )
 
 target_link_libraries(${PROJECT_NAME}_tracking
-  ${catkin_LIBRARIES} ${OpenCV_LIBS} ${Spinnaker_LIBS} aruco ${ueye_LIBS}
+  ${catkin_LIBRARIES} ${OpenCV_LIBS} ${Spinnaker_LIBS} aruco ${ueye_LIBS} apriltag
 )
 
 target_include_directories(${PROJECT_NAME}_tracking 

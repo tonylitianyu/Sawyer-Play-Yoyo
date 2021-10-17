@@ -81,7 +81,7 @@ class Collect:
 
 def main():
     rospy.init_node('collect_data')
-    r = rospy.Rate(100)
+    r = rospy.Rate(200)
 
     collect = Collect()
 
