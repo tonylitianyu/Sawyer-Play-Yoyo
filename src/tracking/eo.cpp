@@ -102,3 +102,11 @@ double EO::getDistance(){
 double EO::getGroundHeight(){
     return ground_height;
 }
+
+
+int EO::getWidth(){
+    return width;
+}
+int EO::getHeight(){
+    return height;
+}

@@ -27,6 +27,9 @@ namespace FLIR{
             double getDistance();
             double getGroundHeight();
 
+            int getWidth();
+            int getHeight();
+
         private:
             CameraPtr pCam = nullptr;
             CameraList camList;

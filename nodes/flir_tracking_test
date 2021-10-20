@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+
+import rospy
+import numpy as np
+from geometry_msgs.msg import Pose
+from std_msgs.msg import Float64
+from sawyer_move.msg import YoyoState, RobotState
+import cv2
+import EasyPySpin
+import apriltag
+from PIL import Image
+import time
+
+class Flir_Tracking:
+    def __init__(self,flir_height,flir_dis) -> None:
+        self.flir_measure_pub = rospy.Publisher('flir_measure', Float64, queue_size=10)
+
+
+        self.cap = EasyPySpin.VideoCapture(0)
+        options = apriltag.DetectorOptions(families="tag25h9", nthreads=14, quad_decimate=1.0)
+        self.detector = apriltag.Detector(options)
+
+        fps  = self.cap.get_pyspin_value("AcquisitionFrameRate")
+        print('fps ' + str(fps))
+        width  = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        print("image width: " + str(width))
+        height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        print("image height: " + str(height))
+
+        mtx, dist = self.load_coefficients()
+        newcamera, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (height, width), 0)
+        
+        self.Kinv = np.linalg.inv(newcamera)
+
+        self.mapx, self.mapy = cv2.initUndistortRectifyMap(mtx, dist, None, newcamera, (height, width), 5)
+
+        self.flir_height = flir_height
+        self.flir_dis = flir_dis
+
+    def load_coefficients(self):
+        '''Loads camera matrix and distortion coefficients.'''
+        cv_file = cv2.FileStorage('/home/tianyu/Documents/Developer/camera_cpp/src/flir_calibration.yml', cv2.FILE_STORAGE_READ)
+        camera_matrix = cv_file.getNode('camera_matrix').mat()
+        dist_matrix = cv_file.getNode('distortion_coefficients').mat()
+        cv_file.release()
+        return camera_matrix, dist_matrix
+
+    def apriltag_detection(self, gray_img, id):
+        results = self.detector.detect(gray_img)
+        yoyo_center = []
+        for i in range(len(results)):
+            r = results[i]
+            (cX, cY) = (int(r.center[0]), int(r.center[1]))
+            if r.tag_id == id:
+
+                yoyo_center = [cX, cY]
+
+        return yoyo_center
+
+    def measure(self):
+        start = time.time()
+        ret, frame = self.cap.read()
+        frame = cv2.rotate(frame, 0)
+        frame = cv2.remap(frame, self.mapx, self.mapy, cv2.INTER_LINEAR)
+        # frame = frame[::-1]
+        # frame = np.transpose(frame)
+        
+        yoyo_z_dis = -1.0
+        pos = self.apriltag_detection(frame, 0)
+        if len(pos) > 0:
+            pos.append(1.0)
+            pos = np.array(pos).reshape(-1,1)
+            
+            world_coor = self.Kinv@pos
+
+            world_coor *= self.flir_dis
+            yoyo_z_dis = self.flir_height - world_coor[1][0]
+
+        self.flir_measure_pub.publish(Float64(yoyo_z_dis))
+
+        # cv2.imshow('img', frame)
+        # key = cv2.waitKey(1)
+
+        #print(time.time() - start)
+
+def main():
+    rospy.init_node('flir_tracking_test')
+    r = rospy.Rate(100)
+
+
+    flir_height = rospy.get_param("flir_height")
+    flir_dis = rospy.get_param("flir_dis")
+
+    flir_tracking = Flir_Tracking(flir_height, flir_dis)
+
+
+    while not rospy.is_shutdown():
+
+        flir_tracking.measure()
+        r.sleep()
+
+
+if __name__ == '__main__':
+    main()

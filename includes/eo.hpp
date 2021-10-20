@@ -22,6 +22,9 @@ namespace UEYE{
             double getDistance();
             double getGroundHeight();
 
+            int getWidth();
+            int getHeight();
+
         private:
             HIDS hCam = 1;
             char* pMem = NULL;

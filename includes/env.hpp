@@ -10,7 +10,7 @@ namespace env {
 
     class Env{
         public:
-            Env();
+            Env(MatrixXd kht);
             MatrixXd getA();
             MatrixXd getB();
 
@@ -20,12 +20,18 @@ namespace env {
             VectorXi getExploreDim();
             double getdt();
 
+            VectorXd basis_func(VectorXd state, VectorXd u);
+            MatrixXd dbasis_dx(VectorXd state, VectorXd u);
+            VectorXd dbasis_du(VectorXd state, VectorXd u);
+
+
         private:
             int num_states = 4;
             int num_actions = 2;
             double dt = 0.1;
             MatrixXd A;
             MatrixXd B;
+            MatrixXd kht;
             
 
 

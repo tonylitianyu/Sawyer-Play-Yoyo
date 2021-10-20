@@ -47,6 +47,7 @@ ground_height(ground_height)
 
 
 void Flir::getNextFrame(Mat&frame){
+    
     ImagePtr pResImage = pCam->GetNextImage();
     ImagePtr convertedImage = pResImage;
     frame = Mat(height, width, CV_8UC1, convertedImage->GetData(), convertedImage->GetStride());
@@ -54,6 +55,7 @@ void Flir::getNextFrame(Mat&frame){
     flip(frame, frame, 1);
     remap(frame, frame, map1, map2, INTER_LINEAR, BORDER_CONSTANT);
     pResImage->Release();
+
 }
 
 
@@ -95,4 +97,12 @@ double Flir::getDistance(){
 
 double Flir::getGroundHeight(){
     return ground_height;
+}
+
+
+int Flir::getWidth(){
+    return width;
+}
+int Flir::getHeight(){
+    return height;
 }

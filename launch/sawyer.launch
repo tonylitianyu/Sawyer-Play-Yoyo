@@ -17,8 +17,11 @@
       <remap from="joint_states" to="robot/joint_states"/> 
     </node>
     
-    
+    <node name="flir_tracking_test" pkg="sawyer_move" type="flir_tracking_test" output="screen" cwd="node" />
     <node name="tracking" pkg="sawyer_move" type="tracking" output="screen" cwd="node" />
+    <node name="eotracking" pkg="sawyer_move" type="eotracking" output="screen" cwd="node" />
+    <!-- <node name="flirtracking" pkg="sawyer_move" type="flirtracking" output="screen" cwd="node" /> -->
     <node name="collect_data" pkg="sawyer_move" type="collect_data" output="screen" cwd="node" />
+    <!-- <node name="klecontrol" pkg="sawyer_move" type="klecontrol" output="screen" cwd="node" /> -->
     <!-- <node name="control" pkg="sawyer_move" type="control" output="screen" cwd="node" /> -->
 </launch>

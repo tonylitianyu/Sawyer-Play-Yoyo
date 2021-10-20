@@ -92,7 +92,7 @@ class Controller
             }
 
             rc.ee_z_vel = action(0);
-            control_pub.publish(rc);
+            //control_pub.publish(rc);
 
         }
 
@@ -132,9 +132,9 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
 
     MatrixXd kht = load_csv<MatrixXd>("/home/tianyu/yoyo_ws/src/sawyer_move/src/kht.csv");
-    std::cout << kht << std::endl;
+    std::cout << "Koopman hat transpose: " << kht << std::endl;
 
-    Env env = Env();
+    Env env = Env(kht);
 
     MatrixXd means(2,3);
     means.col(0) << 4.0,-2.0;
