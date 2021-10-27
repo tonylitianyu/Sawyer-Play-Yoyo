@@ -155,13 +155,14 @@ class Tracking
             double last_yoyo_z_dis_avg = last_yoyo_z_dis.avg();
             double last_yoyo_rot_avg = last_yoyo_rot.avg();
 
-            if(abs(yoyo_z_dis - last_yoyo_z_dis_avg) > 0.3){
+            if(abs(yoyo_z_dis - last_yoyo_z_dis.get_last()) > 0.2){
                 yoyo_z_dis = last_yoyo_z_dis.get_last();
             }
 
             last_yoyo_z_dis.add(yoyo_z_dis);
 
             double yoyo_rot = (last_yoyo_z_dis.avg() - ee_z_pos + 1.0)/0.0055;
+
             last_yoyo_rot.add(yoyo_rot);
 
             auto curr_time = std::chrono::system_clock::now();

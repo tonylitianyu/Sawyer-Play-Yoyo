@@ -71,6 +71,24 @@ double Env::getdt(){
 
 
 
-VectorXd Env::basis_func(VectorXd state, VectorXd u){}
+VectorXd Env::basis_func(VectorXd state, VectorXd u){
+    // VectorXd extra_basis;
+    // extra_basis = VectorXd::Zero(6);
+    // double z = state[0];
+    // double zd = state[1];
+    // double thetad = state[2];
+    // double h = state[3];
+    // double a = u;
+
+
+    // extra_basis(0, 0) = z;
+    // extra_basis(1, 0) = zd;
+    // extra_basis(2, 0) = thetad;
+    // extra_basis(3, 0) = h;
+    // extra_basis(4, 0) = cos(pow(z, 2));
+    // extra_basis(5, 0) = a;
+
+    // return extra_basis;
+}
 MatrixXd Env::dbasis_dx(VectorXd state, VectorXd u){}
 VectorXd Env::dbasis_du(VectorXd state, VectorXd u){}

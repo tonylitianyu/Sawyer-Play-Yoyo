@@ -23,18 +23,18 @@ poly_basis = partition1(np.array([1,2,3,4]), 2)
 # Koopman set up
 def basis(state, action):
     #extra_basis = np.array([np.sin(state[0]), np.sin(state[1]),np.sin(state[2]),np.sin(state[3]),np.cos(state[0]), np.cos(state[1]),np.cos(state[2]),np.cos(state[3])])
-    extra_basis = np.array([action])
+    extra_basis = np.array([1,action])
     #np.array([np.cos(state[0]**2), np.cos(state[0]), (state[0]**2)*(action**2), (state[1]**2)*(action**2), np.cos(state[2])*action, action])
     #np.array([np.cos(state[0]**2), np.cos(state[0]), (state[0]**2)*(action**2), np.cos(state[2]**2), (state[1]**2)*(action**2), state[0]*state[1], state[1]*state[3], action])
 
-    psi = np.hstack((state[:2], extra_basis))
+    psi = np.hstack((state, extra_basis))
     return psi
 
 print(basis(np.zeros(4), 0))
 
 
-num_state = 2  #yoyo-z-pos, z-vel, rot-vel, ee-z-pos
-num_basis = len(basis(np.zeros(4), 0))
+num_state = 5  #yoyo-z-pos, z-vel, rot-vel, ee-z-pos
+num_basis = len(basis(np.zeros(5), 0))
 km = Koopman(basis, num_basis, num_state)
 
 
@@ -45,7 +45,7 @@ for i in range(2, len(args) - 2):
     dp = DataProcessing(0, args[i])
     t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = dp.extract_state(dp.process())
 
-    state_list = np.hstack((z_pos.reshape(-1,1), z_vel.reshape(-1,1)))#, rot_vel.reshape(-1,1), ee_pos.reshape(-1,1)))
+    state_list = np.hstack((z_pos.reshape(-1,1), z_vel.reshape(-1,1), rot.reshape(-1,1), rot_vel.reshape(-1,1), ee_pos.reshape(-1,1)))
     action_list = vel_input
 
 
@@ -72,7 +72,7 @@ print(args[len(args) - 1])
 dp = DataProcessing(0, args[len(args) - 1])
 t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = dp.extract_state(dp.process())
 
-state_list = np.hstack((z_pos.reshape(-1,1), z_vel.reshape(-1,1)))#, rot_vel.reshape(-1,1), ee_pos.reshape(-1,1)))
+state_list = np.hstack((z_pos.reshape(-1,1), z_vel.reshape(-1,1), rot.reshape(-1,1), rot_vel.reshape(-1,1), ee_pos.reshape(-1,1)))
 action_list = vel_input
 predict_arr = []
 

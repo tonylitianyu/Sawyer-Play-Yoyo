@@ -27,7 +27,7 @@ import time
 
 class SawyerMove:
 
-    def __init__(self) -> None:
+    def __init__(self, robot_origin_from_ground) -> None:
         self.start_flag = False
         self.start_pub = rospy.Publisher('start', Int8, queue_size=10)
 
@@ -44,7 +44,7 @@ class SawyerMove:
         self.robot_state_pub = rospy.Publisher('robot_state', RobotState, queue_size=10)
         #self.ee_z_pos_pub = rospy.Publisher('ee_z_pos', Float32, queue_size=10)
         self.ee_z_pos = 1.58
-        self.robot_origin_from_ground = 1.0
+        self.robot_origin_from_ground = robot_origin_from_ground
         #self.start_srv = rospy.Service("start", Empty, self.start_callback)
         self.curr_joint_pos = np.zeros(9)
         self.joint_names = []
@@ -135,6 +135,9 @@ class SawyerMove:
             if frame.p[2] > 0.75 and self.adjust == 0:
                 self.adjust = 1
 
+            if self.adjust == 1 and abs(frame.p[2] - 0.587) < 0.08 and abs(frame.p[2] - 0.587) > 0.01:
+                self.adjust = 2
+
 
             if abs(frame.p[2] - 0.587) < 0.01:
                 self.adjust = 0
@@ -179,7 +182,7 @@ class SawyerMove:
     def loop(self):
         if self.start_flag:
 
-            if self.adjust != 1 and self.yoyo_rot < 50 and self.yoyo_rotvel < 0.0:
+            if self.adjust == 0 and self.yoyo_rot < 50 and self.yoyo_rotvel < 0.0:
                 self.vel_mag += self.torque_mag
                 inv_jac = np.linalg.pinv(self.jac_mat)
 
@@ -192,11 +195,19 @@ class SawyerMove:
                 jc.velocity = joint_vel_val
                 self.joint_action_pub.publish(jc)   
 
- 
+            elif self.adjust == 1:
+                inv_jac = np.linalg.pinv(self.jac_mat)
 
-                
+                ee_vel_val = np.array([0.0, 0.0, -0.35, 0.0, 0.0, 0.0]).reshape(-1,1)
+                joint_vel_val = (inv_jac@ee_vel_val).flatten()
+                jc = JointCommand()
+                jc.mode = 2
+                jc.names = self.joint_names
+                jc.velocity = joint_vel_val
+                self.joint_action_pub.publish(jc) 
 
-            else:
+
+            elif self.adjust == 2:
                 self.vel_mag = 0.0
                 jc_pos = JointCommand()
                 jc_pos.mode = 1
@@ -232,10 +243,10 @@ def main():
     print('ok')
 
     rospy.init_node('sawyer_move')
-    r = rospy.Rate(25)
+    r = rospy.Rate(100)
 
-
-    sm = SawyerMove()
+    robot_origin_from_ground = rospy.get_param("robot_origin_from_ground")
+    sm = SawyerMove(robot_origin_from_ground)
 
     pygame.init()
     screen = pygame.display.set_mode((100,100))
@@ -279,7 +290,7 @@ def main():
                         gripper.open()
                         rospy.sleep(0.3)
                         gripper.close()
-                        sm.torque_mag = 0.07#0.07
+                        sm.torque_mag = 0.03#0.07
 
             keys_pressed = pygame.key.get_pressed()
 

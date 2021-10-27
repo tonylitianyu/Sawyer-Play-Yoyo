@@ -136,16 +136,12 @@ int main(int argc, char **argv)
 
     Env env = Env(kht);
 
-    MatrixXd means(2,3);
-    means.col(0) << 4.0,-2.0;
-    means.col(1) << -1.0,3.0;
-    means.col(2) << -3.0,-3.0;
+    MatrixXd means(1,1);
+    means.col(0) << 0.6;
     cout << means << endl;
 
-    MatrixXd sigmas(2,3);
+    MatrixXd sigmas(1,1);
     sigmas.col(0) << 1.0,1.0;
-    sigmas.col(1) << 1.0,1.0;
-    sigmas.col(2) << 1.0,1.0;
     cout << sigmas << endl;
 
     Dist dist = Dist(means, sigmas);
