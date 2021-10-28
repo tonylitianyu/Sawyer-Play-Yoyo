@@ -56,7 +56,7 @@ class Controller
         robot_state_sub(nh.subscribe("robot_state", 1000, &Controller::robot_state_callback, this)),
         start_sub(nh.subscribe("start", 1000, &Controller::start_callback, this)),
         control_pub(nh.advertise<sawyer_move::RobotControl>("robot_control", 1000, true)),
-        state(VectorXd::Zero(4)),
+        state(VectorXd::Zero(3)),
         start_flag(0),
         env(env),
         dist(dist),
@@ -73,12 +73,12 @@ class Controller
         void yoyo_state_callback(const sawyer_move::YoyoState & state_data){
             state[0] = state_data.yoyo_pos;
             state[1] = state_data.yoyo_posvel;
-            state[2] = state_data.yoyo_rot;
-            state[3] = state_data.yoyo_rotvel;
+            //state[2] = state_data.yoyo_rot;
+            //state[3] = state_data.yoyo_rotvel;
         }
 
         void robot_state_callback(const sawyer_move::RobotState & state_data){
-            //state[3] = state_data.ee_z_pos;
+            state[2] = state_data.ee_z_pos;
         }
 
 
@@ -89,7 +89,11 @@ class Controller
             VectorXd action = VectorXd::Zero(env.getNumActions());
             if (start_flag == 1){
                 action = kle.getKLE(state, dist, 20, 40, var, kle_R, 10.0);
+                cout << "---" << endl;
+                cout << action << endl;
+                cout << "---" << endl;
             }
+
 
             rc.ee_z_vel = action(0);
             //control_pub.publish(rc);
@@ -131,17 +135,20 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "klecontrol");
     ros::NodeHandle n;
 
-    MatrixXd kht = load_csv<MatrixXd>("/home/tianyu/yoyo_ws/src/sawyer_move/src/kht.csv");
-    std::cout << "Koopman hat transpose: " << kht << std::endl;
+    MatrixXd kht_down = load_csv<MatrixXd>("/home/tianyu/yoyo_ws/src/sawyer_move/src/kht_hybrid_down.csv");
+    std::cout << "Koopman down hat transpose: " << kht_down << std::endl;
 
-    Env env = Env(kht);
+    MatrixXd kht_up = load_csv<MatrixXd>("/home/tianyu/yoyo_ws/src/sawyer_move/src/kht_hybrid_up.csv");
+    std::cout << "Koopman up hat transpose: " << kht_up << std::endl;
+
+    Env env = Env(kht_down, kht_up);
 
     MatrixXd means(1,1);
     means.col(0) << 0.6;
     cout << means << endl;
 
     MatrixXd sigmas(1,1);
-    sigmas.col(0) << 1.0,1.0;
+    sigmas.col(0) << 1.0;
     cout << sigmas << endl;
 
     Dist dist = Dist(means, sigmas);

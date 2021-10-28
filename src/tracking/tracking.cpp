@@ -110,7 +110,7 @@ class Tracking
         robot_state_sub(nh.subscribe("robot_state", 1000, &Tracking::robot_state_callback, this)),
         eo_measure_sub(nh.subscribe("eo_measure", 1000, &Tracking::eo_callback, this)),
         flir_measure_sub(nh.subscribe("flir_measure", 1000, &Tracking::flir_callback, this)),
-        last_yoyo_z_dis(MovingAverage("z_dis", 10, 1.00, 1.0, 0.1)),
+        last_yoyo_z_dis(MovingAverage("z_dis", 10, 1.55, 1.0, 0.1)),
         last_yoyo_rot(MovingAverage("rot", 10, 1.00*0.0055, 150.0, 150.0)),
         last_tracking_time(std::chrono::system_clock::now()),
         ee_z_pos(1.55),
@@ -154,6 +154,7 @@ class Tracking
             
             double last_yoyo_z_dis_avg = last_yoyo_z_dis.avg();
             double last_yoyo_rot_avg = last_yoyo_rot.avg();
+            
 
             if(abs(yoyo_z_dis - last_yoyo_z_dis.get_last()) > 0.2){
                 yoyo_z_dis = last_yoyo_z_dis.get_last();
@@ -175,6 +176,7 @@ class Tracking
 
 
             sawyer_move::YoyoState yoyo_state;
+            //cout << yoyo_z_dis << endl;
             yoyo_state.yoyo_pos = yoyo_z_dis;
             yoyo_state.yoyo_posvel = yoyo_z_vel;
             yoyo_state.yoyo_rot = yoyo_rot;

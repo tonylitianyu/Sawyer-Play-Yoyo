@@ -20,15 +20,14 @@ sigmas(sigmas)
 
 
 void Dist::getPDF(MatrixXd &states, VectorXd &pdf){
-    pdf(states.rows());
 
     for (auto i = 0; i < states.rows(); i++){
         double psum = 0.0;
         for (int m = 0; m < means.cols(); m++){
 
-            VectorXd curr_state(2);
-            curr_state << states(i,0), states(i,1);
-            double norm_const = 1/(2*M_PI*sqrt(sigmas(0,m)*sigmas(1,m)));
+            VectorXd curr_state(states.cols());
+            curr_state << states(i,0);
+            double norm_const = 1/(2*M_PI*sqrt(sigmas(0,m)));
             MatrixXd bigSigInv = sigmas.col(m).asDiagonal().inverse();
             VectorXd within_exp = (curr_state - means.col(m)).transpose()*(bigSigInv)*(curr_state- means.col(m));
             psum += norm_const*exp(-0.5*within_exp(0));
@@ -54,9 +53,6 @@ void Dist::sampleStateSpacePDF(int nSample, double high, double low, int nExplor
         VectorXd oneState = m.col(i);
         sampleStates.col(i) = m.col(i);
     }
-
-    
-
 
     getPDF(sampleStates, pdf);
 

@@ -8,8 +8,9 @@ using namespace Eigen;
 using namespace env;
 
 
-Env::Env(MatrixXd kht) : 
-kht(kht)
+Env::Env(MatrixXd kht_down, MatrixXd kht_up) : 
+kht_down(kht_down),
+kht_up(kht_up)
 {
     A.resize(4,4);
     A << 0.0,0.0,1.0,0.0,
@@ -25,26 +26,45 @@ kht(kht)
 
 }
 
-MatrixXd Env::getA(){
+void Env::getA(VectorXd state, VectorXd u, MatrixXd & currA){
+    MatrixXd kht;
+    if (state[1] < 0){
+        kht = kht_up;
+    }else{
+        kht = kht_down;
+    }
 
-    // MatrixXd curr_A_d = kht * dbasis_dx(state_traj.col(t), u_traj[t]);
-    // MatrixXd eye;
-    // eye = MatrixXd::Identity(curr_A_d.rows(),curr_A_d.rows());
-    // MatrixXd curr_A = (curr_A_d - eye) / dt;
-    return A;
+    MatrixXd dbdx(6,3);
+    dbasis_dx(state, u, dbdx);
+
+
+    MatrixXd curr_A_d;
+    curr_A_d = kht * dbdx;
+    MatrixXd eye;
+    eye = MatrixXd::Identity(curr_A_d.rows(),curr_A_d.rows());
+    currA = (curr_A_d - eye) / dt;
+
 }
 
-MatrixXd Env::getB(){
+void Env::getB(VectorXd state, VectorXd u, MatrixXd & currB){
+    MatrixXd kht;
+    if (state[1] < 0){
+        kht = kht_up;
+    }else{
+        kht = kht_down;
+    }
 
+    VectorXd dbdu(6);
+    dbasis_du(state, u, dbdu);
 
-    // MatrixXd curr_B_d = kht * dbasis_du(state_traj.col(t), u_traj[t]);
-    // MatrixXd curr_B = curr_B_d / dt;
-    return B;
+    MatrixXd curr_B_d = kht * dbdu;
+    currB = curr_B_d / dt;
 }
 
-VectorXd Env::step(VectorXd state, VectorXd u){
+VectorXd Env::step(VectorXd state, VectorXd u, MatrixXd & A, MatrixXd & B){
     //state to basis state
     //next_state = kht*basis_state
+
 
     VectorXd dstate = A*state + B*u;
     return state + dstate*dt;
@@ -58,8 +78,8 @@ int Env::getNumActions(){
 }
 
 VectorXi Env::getExploreDim(){
-    VectorXi explore_id(2);
-    explore_id << 0, 1;
+    VectorXi explore_id(1);
+    explore_id << 0;
     return explore_id;
 }
 
@@ -71,24 +91,58 @@ double Env::getdt(){
 
 
 
-VectorXd Env::basis_func(VectorXd state, VectorXd u){
-    // VectorXd extra_basis;
-    // extra_basis = VectorXd::Zero(6);
-    // double z = state[0];
-    // double zd = state[1];
-    // double thetad = state[2];
-    // double h = state[3];
-    // double a = u;
+void Env::basis_func(VectorXd state, VectorXd u, VectorXd&basis_vector){
+    double z = state[0];
+    double zd = state[1];
+    double h = state[2];
+    double a = u[0];
 
 
-    // extra_basis(0, 0) = z;
-    // extra_basis(1, 0) = zd;
-    // extra_basis(2, 0) = thetad;
-    // extra_basis(3, 0) = h;
-    // extra_basis(4, 0) = cos(pow(z, 2));
-    // extra_basis(5, 0) = a;
+    basis_vector(0, 0) = z;
+    basis_vector(1, 0) = zd;
+    basis_vector(2, 0) = h;
+    basis_vector(3, 0) = sin(pow(z, 2));
+    basis_vector(4, 0) = 1;
+    basis_vector(5, 0) = a;
 
-    // return extra_basis;
 }
-MatrixXd Env::dbasis_dx(VectorXd state, VectorXd u){}
-VectorXd Env::dbasis_du(VectorXd state, VectorXd u){}
+void Env::dbasis_dx(VectorXd state, VectorXd u, MatrixXd&dbdx){
+    double z = state[0];
+    double zd = state[1];
+    double h = state[2];
+    double a = u[0];
+
+    dbdx(0, 0) = 1;
+    dbdx(1, 0) = 0;
+    dbdx(2, 0) = 0;
+    dbdx(3, 0) = 2*z*cos(pow(z, 2));
+    dbdx(4, 0) = 0;
+    dbdx(5, 0) = 0;
+    dbdx(0, 1) = 0;
+    dbdx(1, 1) = 1;
+    dbdx(2, 1) = 0;
+    dbdx(3, 1) = 0;
+    dbdx(4, 1) = 0;
+    dbdx(5, 1) = 0;
+    dbdx(0, 2) = 0;
+    dbdx(1, 2) = 0;
+    dbdx(2, 2) = 1;
+    dbdx(3, 2) = 0;
+    dbdx(4, 2) = 0;
+    dbdx(5, 2) = 0;
+
+}
+void Env::dbasis_du(VectorXd state, VectorXd u, VectorXd&dbdu){
+    double z = state[0];
+    double zd = state[1];
+    double h = state[2];
+    double a = u[0];
+
+    dbdu(0, 0) = 0;
+    dbdu(1, 0) = 0;
+    dbdu(2, 0) = 0;
+    dbdu(3, 0) = 0;
+    dbdu(4, 0) = 0;
+    dbdu(5, 0) = 1;
+
+}

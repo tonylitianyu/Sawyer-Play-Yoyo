@@ -12,7 +12,7 @@ args = sys.argv #-train xxx xxx xxx -test xxx
 # Koopman set up
 def basis_down(state, action):
     #extra_basis = np.array([np.sin(state[0]), np.sin(state[1]),np.sin(state[2]),np.sin(state[3]),np.cos(state[0]), np.cos(state[1]),np.cos(state[2]),np.cos(state[3])])
-    extra_basis = np.array([np.sin(state[0])**2, 1,action])
+    extra_basis = np.array([np.sin(state[0])**2,1,action])
     psi = np.hstack((state, extra_basis))
     return psi
 
@@ -109,3 +109,9 @@ axs[num_state].plot(range(len(action_list)), action_list)
 plt.show()
 
 print(loss)
+
+
+np.savetxt('../src/kht_hybrid_down.csv', np.round(km_down.get_K_h_T(),5), delimiter=',')
+np.savetxt('../src/kht_hybrid_up.csv', np.round(km_up.get_K_h_T(),5), delimiter=',')
+
+print(km_down.get_K_h_T().shape)

@@ -51,6 +51,7 @@ namespace kle {
             env::Env model;
             int horizon;
             ReplayBuffer buffer;
+            MatrixXd currAction;
 
             double getPsi(VectorXd explore_state, VectorXd sampleState, double var);
             void getDpsiDx(VectorXd explore_state, MatrixXd &sampleStates, double var,MatrixXd& dpsidx);
@@ -58,6 +59,8 @@ namespace kle {
             void getQ(MatrixXd &currTraj, MatrixXd &sampleStates, double var, VectorXd &q);
             void getPQratio(VectorXd &norm_p, VectorXd&norm_q, VectorXd&pq);
             void clip(VectorXd &temp_u, float bound);
+
+            
 
             
     };

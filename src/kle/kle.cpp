@@ -4,13 +4,13 @@
 #include <random>
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
-
+#include <iostream>
 #include <time.h>
 #include <stdlib.h>
 using namespace Eigen;
 
 using namespace kle;
-
+using namespace std;
 
 
 KLE::KLE(env::Env model, int horizon, int bufferSize) : 
@@ -18,7 +18,8 @@ model(model),
 horizon(horizon),
 num_states(model.getNumStates()),
 num_actions(model.getNumActions()),
-buffer(ReplayBuffer(bufferSize))
+buffer(ReplayBuffer(bufferSize)),
+currAction(MatrixXd::Zero(horizon, model.getNumActions()))
 {
 
 }
@@ -40,14 +41,12 @@ void KLE::getDpsiDx(VectorXd explore_state, MatrixXd& sampleStates, double var, 
 {
     for (auto i = 0; i < sampleStates.rows(); i++){
         VectorXd curr_nonzero_row(explore_state.size());
-        
         curr_nonzero_row = getPsi(explore_state, sampleStates.row(i), var) * (sampleStates.row(i) - explore_state.transpose()) / var;
         VectorXd curr_zero_row = VectorXd::Zero(model.getNumStates() - explore_state.size());
         
         VectorXd curr_row(model.getNumStates());
         
         curr_row << curr_nonzero_row, curr_zero_row;
-
         dpsidx.row(i) = curr_row;
 
     }
@@ -57,11 +56,11 @@ MatrixXd KLE::getDbDx(VectorXd explore_state)
 {
     MatrixXd dbdx(model.getNumStates(), 1);
     for (auto i = 0; i < explore_state.size(); i++){
-        dbdx << 80.0*pow(explore_state(i)/10.0,7.0);
+        dbdx(i, 0) = 80.0*pow(explore_state(i)/10.0,7.0);
     }
 
-    for (auto j = 0; j < (model.getNumStates() - explore_state.size()); j++){
-        dbdx << 0.0;
+    for (auto j = explore_state.size(); j < (model.getNumStates() - explore_state.size()); j++){
+        dbdx(j,0) = 0.0;
     }
     return dbdx;
 
@@ -104,7 +103,7 @@ VectorXd KLE::getKLE(VectorXd state, Dist &goal,
     MatrixXd sampleStates(nSample, model.getExploreDim().size());
 
 
-    goal.sampleStateSpacePDF(nSample, 5.0, -5.0, model.getExploreDim().size(), p, sampleStates);
+    goal.sampleStateSpacePDF(nSample, 2.0, -0.5, model.getExploreDim().size(), p, sampleStates);
     
     VectorXd norm_p = p/p.sum();
 
@@ -113,14 +112,15 @@ VectorXd KLE::getKLE(VectorXd state, Dist &goal,
     MatrixXd currTraj(horizon, model.getNumStates());
     //forward simulation
     for (auto t = 0; t < horizon; t++){
-        MatrixXd A = model.getA();
-        MatrixXd B = model.getB();
+        MatrixXd A(model.getNumStates(),model.getNumStates());
+        model.getA(state, currAction.row(t), A);
+        MatrixXd B(model.getNumStates(),model.getNumActions());
+        model.getB(state, currAction.row(t), B);
+
 
         MatrixXd dpsidx(nSample, state.size());
         getDpsiDx(state.head(model.getExploreDim().size()), sampleStates, var, dpsidx);
-
         MatrixXd dbdx = getDbDx(state.head(model.getExploreDim().size()));
-
         struct fwdDerivs derivs;
         derivs.A = A;
         derivs.B = B;
@@ -129,8 +129,7 @@ VectorXd KLE::getKLE(VectorXd state, Dist &goal,
         derivs_arr.push_back(derivs);
 
         currTraj.row(t) = state;
-
-        state = model.step(state, VectorXd::Zero(model.getNumActions()));
+        state = model.step(state, VectorXd::Zero(model.getNumActions()), A, B);
     }
 
     if (buffer.getSize() > batchSize){
@@ -151,7 +150,7 @@ VectorXd KLE::getKLE(VectorXd state, Dist &goal,
 
     VectorXd ratio_pq(norm_p.size());
     getPQratio(norm_p, norm_q, ratio_pq);
-
+    
     MatrixXd RI = (1.0/R)*MatrixXd::Identity(model.getNumActions(), model.getNumActions());
 
     VectorXd rho = VectorXd::Zero(state.size());
@@ -165,11 +164,12 @@ VectorXd KLE::getKLE(VectorXd state, Dist &goal,
                             - (currDerivs.A).transpose() * rho - currDerivs.dbdx);
         
         VectorXd currDmuStar = -RI * currDerivs.B.transpose() * rho;
+        clip(currDmuStar, bound);
+        currAction.row(t) = currDmuStar;
 
         if (t == 0){
-            VectorXd outputU = currDmuStar;
-            clip(outputU, bound);
-            action = outputU;
+
+            action = currDmuStar;
             
         }
     }

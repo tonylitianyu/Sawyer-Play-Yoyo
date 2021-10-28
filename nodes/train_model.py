@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from yoyo_visual import DataProcessing
 np.set_printoptions(suppress=True)
 
+
+state_idx = [1,2,5]
 args = sys.argv #-train xxx xxx xxx -test xxx
 
 
@@ -30,11 +32,11 @@ def basis(state, action):
     psi = np.hstack((state, extra_basis))
     return psi
 
-print(basis(np.zeros(4), 0))
+print(basis(np.zeros(len(state_idx)), 0))
 
 
-num_state = 5  #yoyo-z-pos, z-vel, rot-vel, ee-z-pos
-num_basis = len(basis(np.zeros(5), 0))
+num_state = len(state_idx)  #yoyo-z-pos, z-vel, rot-vel, ee-z-pos
+num_basis = len(basis(np.zeros(len(state_idx)), 0))
 km = Koopman(basis, num_basis, num_state)
 
 
@@ -45,7 +47,7 @@ for i in range(2, len(args) - 2):
     dp = DataProcessing(0, args[i])
     t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = dp.extract_state(dp.process())
 
-    state_list = np.hstack((z_pos.reshape(-1,1), z_vel.reshape(-1,1), rot.reshape(-1,1), rot_vel.reshape(-1,1), ee_pos.reshape(-1,1)))
+    state_list = np.hstack((z_pos.reshape(-1,1), z_vel.reshape(-1,1), ee_pos.reshape(-1,1)))
     action_list = vel_input
 
 
@@ -72,7 +74,7 @@ print(args[len(args) - 1])
 dp = DataProcessing(0, args[len(args) - 1])
 t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = dp.extract_state(dp.process())
 
-state_list = np.hstack((z_pos.reshape(-1,1), z_vel.reshape(-1,1), rot.reshape(-1,1), rot_vel.reshape(-1,1), ee_pos.reshape(-1,1)))
+state_list = np.hstack((z_pos.reshape(-1,1), z_vel.reshape(-1,1), ee_pos.reshape(-1,1)))
 action_list = vel_input
 predict_arr = []
 
@@ -80,7 +82,7 @@ predict_arr = []
 K_h_T = km.get_K_h_T()
 state = state_list[0]
 predict_state = state.copy()
-freq = 15
+freq = 200
 for t in range(1,len(t_step)-1):
     if t % freq == 0:
         predict_state = state_list[t]
