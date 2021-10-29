@@ -132,7 +132,7 @@ class SawyerMove:
 
 
 
-            if frame.p[2] > 0.75 and self.adjust == 0:
+            if self.adjust == 0 and frame.p[2] > 0.75:
                 self.adjust = 1
 
             if self.adjust == 1 and abs(frame.p[2] - 0.587) < 0.08 and abs(frame.p[2] - 0.587) > 0.01:

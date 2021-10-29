@@ -142,7 +142,7 @@ class Tracking
             }
 
             if ((eo_yoyo_z_dis < 0.0) && (flir_yoyo_z_dis < 0.0)){
-                cout << "no tag detected from both cameras !!!" << endl;
+                //cout << "no tag detected from both cameras !!!" << endl;
                 return;
             }
 

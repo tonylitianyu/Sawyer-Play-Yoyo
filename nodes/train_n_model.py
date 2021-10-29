@@ -95,10 +95,12 @@ predict_arr = np.array(predict_arr)
 print("Loss: ")
 loss = 0.0
 fig, axs = plt.subplots(num_state+1)
+plot_title = ['yoyo_pos', 'yoyo_vel', 'robot_pos', 'input']
 for i in range(num_state):
     #if i == 0:
         #axs[i].set_ylim([0.0,1.0])
         #axs[i].invert_yaxis()
+    axs[i].set_title(plot_title[i])
     axs[i].plot(range(len(predict_arr)), predict_arr[:,i])
     axs[i].plot(range(len(state_list)), state_list[:,i])
     loss += np.square(np.subtract(state_list[:,i][:-2], predict_arr[:,i])).mean()

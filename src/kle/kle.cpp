@@ -107,20 +107,22 @@ VectorXd KLE::getKLE(VectorXd state, Dist &goal,
     
     VectorXd norm_p = p/p.sum();
 
-
+    
     vector<fwdDerivs> derivs_arr;
     MatrixXd currTraj(horizon, model.getNumStates());
     //forward simulation
     for (auto t = 0; t < horizon; t++){
         MatrixXd A(model.getNumStates(),model.getNumStates());
         model.getA(state, currAction.row(t), A);
+        
         MatrixXd B(model.getNumStates(),model.getNumActions());
         model.getB(state, currAction.row(t), B);
 
-
+        
         MatrixXd dpsidx(nSample, state.size());
         getDpsiDx(state.head(model.getExploreDim().size()), sampleStates, var, dpsidx);
         MatrixXd dbdx = getDbDx(state.head(model.getExploreDim().size()));
+
         struct fwdDerivs derivs;
         derivs.A = A;
         derivs.B = B;
@@ -131,6 +133,7 @@ VectorXd KLE::getKLE(VectorXd state, Dist &goal,
         currTraj.row(t) = state;
         state = model.step(state, VectorXd::Zero(model.getNumActions()), A, B);
     }
+    
 
     if (buffer.getSize() > batchSize){
         MatrixXd pastStates(batchSize, model.getNumStates());

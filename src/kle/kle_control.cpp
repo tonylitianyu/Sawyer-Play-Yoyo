@@ -89,14 +89,17 @@ class Controller
             VectorXd action = VectorXd::Zero(env.getNumActions());
             if (start_flag == 1){
                 action = kle.getKLE(state, dist, 20, 40, var, kle_R, 10.0);
-                cout << "---" << endl;
-                cout << action << endl;
-                cout << "---" << endl;
+                // cout << "---" << endl;
+                // cout << action(0) << endl;
+                // cout << "---" << endl;
+                rc.ee_z_vel = action(0);
+
+                
+                control_pub.publish(rc);
             }
 
 
-            rc.ee_z_vel = action(0);
-            //control_pub.publish(rc);
+
 
         }
 

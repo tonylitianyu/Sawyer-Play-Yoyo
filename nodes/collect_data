@@ -4,7 +4,7 @@ import rospy
 import numpy as np
 from std_msgs.msg import Float32, Int8
 from datetime import datetime
-from sawyer_move.msg import YoyoState, RobotState
+from sawyer_move.msg import YoyoState, RobotState, RobotControl
 import time as time
 import os
 
@@ -16,6 +16,8 @@ class Collect:
         self.yoyo_state_sub = rospy.Subscriber('yoyo_state', YoyoState, self.state_callback)
 
         self.robot_state_sub = rospy.Subscriber('robot_state', RobotState, self.robot_state_callback)
+
+        self.kle_sub = rospy.Subscriber('robot_control', RobotControl, self.kle_callback)
 
         self.start_sub = rospy.Subscriber('start', Int8, self.start_callback)
         self.start = 0
@@ -64,10 +66,13 @@ class Collect:
 
     def robot_state_callback(self, data):
         self.ee_z_pos = data.ee_z_pos
-        self.ee_z_vel = data.ee_z_vel
+        #self.ee_z_vel = data.ee_z_vel
 
     def start_callback(self, data):
         self.start = data.data
+
+    def kle_callback(self, data):
+        self.ee_z_vel = data.ee_z_vel
 
     def write_data_to_file(self):
         
