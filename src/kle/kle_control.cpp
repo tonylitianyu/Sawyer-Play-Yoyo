@@ -156,7 +156,7 @@ int main(int argc, char **argv)
 
     Dist dist = Dist(means, sigmas);
 
-    Controller controller = Controller(n, env, dist, 30, 0.5, 0.005, 100);
+    Controller controller = Controller(n, env, dist, 30, 0.5, 50.0, 100); //0.05
     ros::spin();
 
 
