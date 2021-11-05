@@ -87,6 +87,7 @@ class Controller
 
             sawyer_move::RobotControl rc;
             VectorXd action = VectorXd::Zero(env.getNumActions());
+
             if (start_flag == 1){
                 action = kle.getKLE(state, dist, 20, 40, var, kle_R, 10.0);
                 // cout << "---" << endl;
@@ -147,7 +148,7 @@ int main(int argc, char **argv)
     Env env = Env(kht_down, kht_up);
 
     MatrixXd means(1,1);
-    means.col(0) << 0.6;
+    means.col(0) << 0.8;
     cout << means << endl;
 
     MatrixXd sigmas(1,1);
@@ -156,7 +157,7 @@ int main(int argc, char **argv)
 
     Dist dist = Dist(means, sigmas);
 
-    Controller controller = Controller(n, env, dist, 30, 0.5, 50.0, 100); //0.05
+    Controller controller = Controller(n, env, dist, 10, 0.5, 0.2, 100); //0.05
     ros::spin();
 
 

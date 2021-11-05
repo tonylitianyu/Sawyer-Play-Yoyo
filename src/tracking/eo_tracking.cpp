@@ -78,6 +78,18 @@ class EO_Tracking{
             for (int i = 0; i < zarray_size(detections); i++) {
                 apriltag_detection_t *det;
                 zarray_get(detections, i, &det);
+                // line(eo_frame, Point(det->p[0][0], det->p[0][1]),
+                //         Point(det->p[1][0], det->p[1][1]),
+                //         Scalar(0, 0xff, 0), 2);
+                // line(eo_frame, Point(det->p[0][0], det->p[0][1]),
+                //         Point(det->p[3][0], det->p[3][1]),
+                //         Scalar(0, 0, 0xff), 2);
+                // line(eo_frame, Point(det->p[1][0], det->p[1][1]),
+                //         Point(det->p[2][0], det->p[2][1]),
+                //         Scalar(0xff, 0, 0), 2);
+                // line(eo_frame, Point(det->p[2][0], det->p[2][1]),
+                //         Point(det->p[3][0], det->p[3][1]),
+                //         Scalar(0xff, 0, 0), 2);
 
                 Mat worldCord = (Mat_<double>(3,1) << det->c[0], det->c[1], 1.0);
                 worldCord.convertTo(worldCord, CV_64FC1);

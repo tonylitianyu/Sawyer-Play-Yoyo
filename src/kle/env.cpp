@@ -64,9 +64,16 @@ void Env::getB(VectorXd state, VectorXd u, MatrixXd & currB){
 VectorXd Env::step(VectorXd state, VectorXd u, MatrixXd & A, MatrixXd & B){
     //state to basis state
     //next_state = kht*basis_state
+    MatrixXd kht;
+    if (state[1] < 0){
+        kht = kht_up;
+    }else{
+        kht = kht_down;
+    }
 
-
-    VectorXd dstate = A*state + B*u;
+    VectorXd basis(6);
+    basis_func(state, u, basis);
+    VectorXd dstate = kht*basis;//A*state + B*u;
     return state + dstate*dt;
 }
 

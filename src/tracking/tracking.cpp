@@ -140,6 +140,7 @@ class Tracking
             }else{
                 yoyo_z_dis = flir_yoyo_z_dis;
             }
+            //cout << yoyo_z_dis << endl;
 
             if ((eo_yoyo_z_dis < 0.0) && (flir_yoyo_z_dis < 0.0)){
                 //cout << "no tag detected from both cameras !!!" << endl;
@@ -151,7 +152,6 @@ class Tracking
             // double yoyo_z_dis = robot_origin_from_ground - (cent.y * dis_per_pixel) + (robot_origin_z*dis_per_pixel);
             
 
-            
             double last_yoyo_z_dis_avg = last_yoyo_z_dis.avg();
             double last_yoyo_rot_avg = last_yoyo_rot.avg();
             
@@ -176,7 +176,7 @@ class Tracking
 
 
             sawyer_move::YoyoState yoyo_state;
-            //cout << yoyo_z_dis << endl;
+
             yoyo_state.yoyo_pos = yoyo_z_dis;
             yoyo_state.yoyo_posvel = yoyo_z_vel;
             yoyo_state.yoyo_rot = yoyo_rot;

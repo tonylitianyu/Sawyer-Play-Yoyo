@@ -28,7 +28,7 @@ namespace env {
         private:
             int num_states = 3;
             int num_actions = 1;
-            double dt = 0.1;
+            double dt = 0.01;
             MatrixXd A;
             MatrixXd B;
             MatrixXd kht_down;

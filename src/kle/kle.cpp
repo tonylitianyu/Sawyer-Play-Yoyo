@@ -83,7 +83,9 @@ void KLE::getQ(MatrixXd &currTraj, MatrixXd &sampleStates, double var, VectorXd 
 void KLE::getPQratio(VectorXd &norm_p, VectorXd&norm_q, VectorXd&pq)
 {
     for (auto i = 0; i < norm_p.size(); i++){
-        pq(i) = norm_p(i)/norm_q(i);
+
+        pq(i) = norm_p(i)/norm_q(i) + 0.00001;
+        
     }
 }
 
@@ -113,6 +115,7 @@ VectorXd KLE::getKLE(VectorXd state, Dist &goal,
     //forward simulation
     for (auto t = 0; t < horizon; t++){
         MatrixXd A(model.getNumStates(),model.getNumStates());
+
         model.getA(state, currAction.row(t), A);
         
         MatrixXd B(model.getNumStates(),model.getNumActions());
