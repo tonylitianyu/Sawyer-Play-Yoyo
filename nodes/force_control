@@ -156,8 +156,8 @@ class SawyerMove:
     def init_joints(self):
         if len(list(self.curr_joint_pos)) > 2:  #?????why would there be empty
             a = np.deg2rad(-90)
-            b = np.deg2rad(80)
-            c = np.deg2rad(100)
+            b = np.deg2rad(90)
+            c = np.deg2rad(90)
 
             goal_joints = [0.0, a, 0.0, b, 0.0, c, 1.70]
 
@@ -262,7 +262,7 @@ def main():
     gripper = intera_interface.Gripper(valid_limbs[0] + '_gripper')
     gripper.set_cmd_velocity(gripper.MAX_VELOCITY)
     gripper.set_position(0.010)
-    close_pos = 0.023
+    close_pos = 0.021
     open_pos = 0.10
     gripper.set_position(close_pos)
 

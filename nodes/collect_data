@@ -77,6 +77,7 @@ class Collect:
     def write_data_to_file(self):
         
         if self.start == 1:
+
             single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.curr_yoyo_pos_vel), str(self.curr_yoyo_rot), str(self.curr_yoyo_rot_vel), str(self.ee_z_pos), str(self.ee_z_vel)]
 
             delim = ", "
