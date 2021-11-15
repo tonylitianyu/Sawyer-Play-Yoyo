@@ -162,7 +162,8 @@ class Tracking
 
             last_yoyo_z_dis.add(yoyo_z_dis);
 
-            double yoyo_rot = (last_yoyo_z_dis.avg() - ee_z_pos + 1.0)/0.0055;
+            double string_len = 68.58/100.0;
+            double yoyo_rot = (last_yoyo_z_dis.avg() - ee_z_pos + string_len)/0.0055;
 
             last_yoyo_rot.add(yoyo_rot);
 

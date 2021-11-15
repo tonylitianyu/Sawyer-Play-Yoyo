@@ -132,7 +132,7 @@ class SawyerMove:
 
 
 
-            if self.adjust == 0 and frame.p[2] > 0.65:
+            if self.adjust == 0 and frame.p[2] > 0.63:
                 self.adjust = 1
 
             if self.adjust == 1 and abs(frame.p[2] - 0.587) < 0.08 and abs(frame.p[2] - 0.587) > 0.01:
@@ -182,7 +182,7 @@ class SawyerMove:
     def loop(self):
         if self.start_flag:
 
-            if self.adjust == 0 and self.yoyo_rot < 30 and self.yoyo_rotvel < 0.0:
+            if self.adjust == 0 and self.yoyo_rot < 20 and self.yoyo_rotvel < 0.0:
                 self.vel_mag += self.torque_mag
 
                 inv_jac = np.linalg.pinv(self.jac_mat)
@@ -263,7 +263,7 @@ def main():
     gripper = intera_interface.Gripper(valid_limbs[0] + '_gripper')
     gripper.set_cmd_velocity(gripper.MAX_VELOCITY)
     gripper.set_position(0.010)
-    close_pos = 0.021
+    close_pos = 0.027
     open_pos = 0.10
     gripper.set_position(close_pos)
 
@@ -292,7 +292,7 @@ def main():
                         gripper.open()
                         rospy.sleep(0.3)
                         gripper.close()
-                        sm.torque_mag = 0.05#0.07
+                        sm.torque_mag = 0.25#0.07
 
             keys_pressed = pygame.key.get_pressed()
 
