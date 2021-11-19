@@ -76,7 +76,7 @@ K_h_T_down = km_down.get_K_h_T()
 K_h_T_up = km_up.get_K_h_T()
 state = state_list[0]
 predict_state = state.copy()
-freq = 200
+freq = 10
 for t in range(1,len(t_step)-1):
     if t % freq == 0:
         predict_state = state_list[t]

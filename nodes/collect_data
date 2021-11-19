@@ -36,6 +36,9 @@ class Collect:
         
 
         self.ee_z_vel = 0.0
+        self.kle_vel = 0.0
+
+
         self.ee_z_pos = 0.0
         
         self.t_0 = time.time()
@@ -66,19 +69,19 @@ class Collect:
 
     def robot_state_callback(self, data):
         self.ee_z_pos = data.ee_z_pos
-        #self.ee_z_vel = data.ee_z_vel
+        self.ee_z_vel = data.ee_z_vel
 
     def start_callback(self, data):
         self.start = data.data
 
     def kle_callback(self, data):
-        self.ee_z_vel = data.ee_z_vel
+        self.kle_vel = data.ee_z_vel
 
     def write_data_to_file(self):
         
         if self.start == 1:
 
-            single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.curr_yoyo_pos_vel), str(self.curr_yoyo_rot), str(self.curr_yoyo_rot_vel), str(self.ee_z_pos), str(self.ee_z_vel)]
+            single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.curr_yoyo_pos_vel), str(self.curr_yoyo_rot), str(self.curr_yoyo_rot_vel), str(self.ee_z_pos), str(self.ee_z_vel), str(self.kle_vel)]
 
             delim = ", "
             self.file.write(delim.join(single_line) + "\n")

@@ -65,6 +65,9 @@ class SawyerMove:
         self.setup_jac()
 
 
+        self.control_type = "simple" #simple || kle
+        self.kle_mag = 0.0
+
     def setup_jac(self):
         # load in ros parameters
         self.baselink = rospy.get_param("sawyer/baselink")
@@ -103,8 +106,7 @@ class SawyerMove:
         self.yoyo_rotvel = data.yoyo_rotvel
 
     def control_callback(self, data):
-        #self.torque_mag = data.ee_z_vel
-        ...
+        self.kle_mag = data.ee_z_vel
 
     def jss_callback(self, data):
         self.curr_joint_pos = data.position
@@ -131,16 +133,17 @@ class SawyerMove:
             self.ee_z_pos = frame.p[2] + self.robot_origin_from_ground
 
 
+            if self.control_type == "simple":
+                if self.adjust == 0 and frame.p[2] > 0.63:
+                    self.adjust = 1
 
-            if self.adjust == 0 and frame.p[2] > 0.63:
-                self.adjust = 1
-
-            if self.adjust == 1 and abs(frame.p[2] - 0.587) < 0.08 and abs(frame.p[2] - 0.587) > 0.01:
-                self.adjust = 2
+                #if self.adjust == 1 and abs(frame.p[2] - 0.587) < 0.08 and abs(frame.p[2] - 0.587) > 0.01:
+                # if self.adjust == 1 and abs(frame.p[2] - 0.587) < 0.05:
+                #     self.adjust = 2
 
 
-            if abs(frame.p[2] - 0.587) < 0.01:
-                self.adjust = 0
+                if abs(frame.p[2] - 0.587) < 0.01:
+                    self.adjust = 0
             
             # if frame.p[2] < 0.60:
             #     self.torque_mag = 0.01#0.22
@@ -182,51 +185,68 @@ class SawyerMove:
     def loop(self):
         if self.start_flag:
 
-            if self.adjust == 0 and self.yoyo_rot < 20 and self.yoyo_rotvel < 0.0:
-                self.vel_mag += self.torque_mag
+            if self.control_type == "simple":
+                if self.adjust == 0 and self.yoyo_rot < 20 and self.yoyo_rotvel < 0.0:
+                    self.vel_mag += self.torque_mag
+
+                    inv_jac = np.linalg.pinv(self.jac_mat)
+
+                    ee_vel_val = np.array([0.0, 0.0, self.vel_mag, 0.0, 0.0, 0.0]).reshape(-1,1)
+                    joint_vel_val = (inv_jac@ee_vel_val).flatten()
+
+
+                    jc = JointCommand()
+                    jc.mode = 2
+                    jc.names = self.joint_names
+                    jc.velocity = joint_vel_val
+                    self.joint_action_pub.publish(jc)   
+
+                elif self.adjust == 1:
+                    self.vel_mag = -0.35
+                    inv_jac = np.linalg.pinv(self.jac_mat)
+                    #print(self.vel_mag)
+
+                    ee_vel_val = np.array([0.0, 0.0, self.vel_mag, 0.0, 0.0, 0.0]).reshape(-1,1)
+                    joint_vel_val = (inv_jac@ee_vel_val).flatten()
+                    jc = JointCommand()
+                    jc.mode = 2
+                    jc.names = self.joint_names
+                    jc.velocity = joint_vel_val
+                    self.joint_action_pub.publish(jc) 
+
+
+                elif self.adjust == 2:
+                    self.vel_mag = 0.0
+                    jc_pos = JointCommand()
+                    jc_pos.mode = 1
+
+                    a = np.deg2rad(-90)
+                    b = np.deg2rad(90)
+                    c = np.deg2rad(90)
+
+                    goal_joints = [0.0, a, 0.0, b, 0.0, c, 1.70]
+                    jc_pos.names = self.joint_names
+                    jc_pos.position = goal_joints
+                    self.joint_action_pub.publish(jc_pos)
+
+
+                    #self.adjust = 2
+
+            else:
+                self.vel_mag = self.kle_mag
 
                 inv_jac = np.linalg.pinv(self.jac_mat)
 
                 ee_vel_val = np.array([0.0, 0.0, self.vel_mag, 0.0, 0.0, 0.0]).reshape(-1,1)
                 joint_vel_val = (inv_jac@ee_vel_val).flatten()
 
-
                 jc = JointCommand()
                 jc.mode = 2
                 jc.names = self.joint_names
                 jc.velocity = joint_vel_val
-                self.joint_action_pub.publish(jc)   
+                self.joint_action_pub.publish(jc)  
 
-            elif self.adjust == 1:
-                inv_jac = np.linalg.pinv(self.jac_mat)
-
-                ee_vel_val = np.array([0.0, 0.0, -0.35, 0.0, 0.0, 0.0]).reshape(-1,1)
-                joint_vel_val = (inv_jac@ee_vel_val).flatten()
-                jc = JointCommand()
-                jc.mode = 2
-                jc.names = self.joint_names
-                jc.velocity = joint_vel_val
-                self.joint_action_pub.publish(jc) 
-
-
-            elif self.adjust == 2:
-                self.vel_mag = 0.0
-                jc_pos = JointCommand()
-                jc_pos.mode = 1
-
-                a = np.deg2rad(-90)
-                b = np.deg2rad(90)
-                c = np.deg2rad(90)
-
-                goal_joints = [0.0, a, 0.0, b, 0.0, c, 1.70]
-                jc_pos.names = self.joint_names
-                jc_pos.position = goal_joints
-                self.joint_action_pub.publish(jc_pos)
-
-
-                #self.adjust = 2
-
-
+            
             robot_state = RobotState()
             robot_state.ee_z_pos = self.ee_z_pos
             robot_state.ee_z_vel = self.vel_mag
@@ -292,7 +312,7 @@ def main():
                         gripper.open()
                         rospy.sleep(0.3)
                         gripper.close()
-                        sm.torque_mag = 0.25#0.07
+                        sm.torque_mag = 0.20#0.07
 
             keys_pressed = pygame.key.get_pressed()
 

@@ -148,11 +148,11 @@ int main(int argc, char **argv)
     Env env = Env(kht_down, kht_up);
 
     MatrixXd means(1,1);
-    means.col(0) << 0.6;
+    means.col(0) << 0.8;
     cout << means << endl;
 
     MatrixXd sigmas(1,1);
-    sigmas.col(0) << 1.0;
+    sigmas.col(0) << 0.25;
     cout << sigmas << endl;
 
     Dist dist = Dist(means, sigmas);

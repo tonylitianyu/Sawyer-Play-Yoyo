@@ -23,17 +23,22 @@ void Dist::getPDF(MatrixXd &states, VectorXd &pdf){
 
     for (auto i = 0; i < states.rows(); i++){
         double psum = 0.0;
-        for (int m = 0; m < means.cols(); m++){
+        // for (int m = 0; m < means.cols(); m++){
 
-            VectorXd curr_state(states.cols());
-            curr_state << states(i,0);
-            double norm_const = 1/(2*M_PI*sqrt(sigmas(0,m)));
-            MatrixXd bigSigInv = sigmas.col(m).asDiagonal().inverse();
-            VectorXd within_exp = (curr_state - means.col(m)).transpose()*(bigSigInv)*(curr_state- means.col(m));
-            psum += norm_const*exp(-0.5*within_exp(0));
+        //     VectorXd curr_state(states.cols());
+        //     curr_state << states(i,0);
+        //     double norm_const = 1/(2*M_PI*sqrt(sigmas(0,m)));
+        //     MatrixXd bigSigInv = sigmas.col(m).asDiagonal().inverse();
+        //     VectorXd within_exp = (curr_state - means.col(m)).transpose()*(bigSigInv)*(curr_state- means.col(m));
+        //     psum += norm_const*exp(-0.5*within_exp(0));
+        // }
+
+        double curr_state = states(i,0);
+        if ((curr_state < 1.0) && (curr_state > 0.6)){
+            pdf(i) = 1.0;
+        }else{
+            pdf(i) = 0.0;
         }
-
-        pdf(i) = psum;
     }
 
 }

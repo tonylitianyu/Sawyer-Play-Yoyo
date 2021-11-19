@@ -177,7 +177,7 @@ class Tracking
 
 
             sawyer_move::YoyoState yoyo_state;
-
+            
             yoyo_state.yoyo_pos = yoyo_z_dis;
             yoyo_state.yoyo_posvel = yoyo_z_vel;
             yoyo_state.yoyo_rot = yoyo_rot;
