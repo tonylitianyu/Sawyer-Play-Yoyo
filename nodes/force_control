@@ -65,7 +65,7 @@ class SawyerMove:
         self.setup_jac()
 
 
-        self.control_type = "simple" #simple || kle
+        self.control_type = "kle" #simple || kle
         self.kle_mag = 0.0
 
     def setup_jac(self):
@@ -135,12 +135,10 @@ class SawyerMove:
 
             if self.control_type == "simple":
                 if self.adjust == 0 and frame.p[2] > 0.63:
-                    self.adjust = 1
+                    self.adjust = 2
 
-                #if self.adjust == 1 and abs(frame.p[2] - 0.587) < 0.08 and abs(frame.p[2] - 0.587) > 0.01:
-                # if self.adjust == 1 and abs(frame.p[2] - 0.587) < 0.05:
+                # if self.adjust == 1 and abs(frame.p[2] - 0.587) < 0.08 and abs(frame.p[2] - 0.587) > 0.01:
                 #     self.adjust = 2
-
 
                 if abs(frame.p[2] - 0.587) < 0.01:
                     self.adjust = 0
@@ -202,7 +200,7 @@ class SawyerMove:
                     self.joint_action_pub.publish(jc)   
 
                 elif self.adjust == 1:
-                    self.vel_mag = -0.35
+                    self.vel_mag = -0.30
                     inv_jac = np.linalg.pinv(self.jac_mat)
                     #print(self.vel_mag)
 
@@ -237,7 +235,7 @@ class SawyerMove:
 
                 inv_jac = np.linalg.pinv(self.jac_mat)
 
-                ee_vel_val = np.array([0.0, 0.0, self.vel_mag, 0.0, 0.0, 0.0]).reshape(-1,1)
+                ee_vel_val = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(-1,1)
                 joint_vel_val = (inv_jac@ee_vel_val).flatten()
 
                 jc = JointCommand()
@@ -283,7 +281,7 @@ def main():
     gripper = intera_interface.Gripper(valid_limbs[0] + '_gripper')
     gripper.set_cmd_velocity(gripper.MAX_VELOCITY)
     gripper.set_position(0.010)
-    close_pos = 0.027
+    close_pos = 0.021
     open_pos = 0.10
     gripper.set_position(close_pos)
 
