@@ -5,7 +5,9 @@ import argparse
 
 import rospy
 import numpy as np
-from intera_core_msgs.msg import JointCommand
+from geometry_msgs.msg import Pose, Point, Quaternion
+from intera_core_msgs.msg import JointCommand, InteractionControlCommand
+from intera_motion_interface import (InteractionOptions, InteractionPublisher)
 import intera_external_devices
 import intera_interface
 import intera_control
@@ -17,6 +19,17 @@ from sawyer_move.msg import YoyoState, RobotControl
 from sawyer_move.msg import RobotState
 import pygame
 
+
+import actionlib
+
+from control_msgs.msg import (
+    FollowJointTrajectoryAction,
+    FollowJointTrajectoryGoal,
+)
+from copy import copy
+from trajectory_msgs.msg import (
+    JointTrajectoryPoint,
+)
 
 import PyKDL as kdl
 import kdl_parser_py.urdf as kdl_parser
@@ -257,13 +270,112 @@ class SawyerMove:
                 self.start_pub.publish(Int8(0))
 
 
+class InteractionPublisher():
+    def __init__(self) -> None:
+        self.pub = rospy.Publisher('/robot/limb/right/interaction_control_command',
+                                   InteractionControlCommand, queue_size=1,
+                                   tcp_nodelay=True)
+        self.enable = intera_interface.RobotEnable(CHECK_VERSION)
+
+
+    def sendCommand(self):
+        icc = InteractionControlCommand()
+        icc.header = Header()
+        icc.header.stamp = rospy.Time.now()
+        
+        icc.interaction_control_active = True
+        icc.K_impedance = [1300, 1300, 1300, 30, 30, 30]
+        icc.max_impedance = [True, True, True, True, True, True]
+        icc.D_impedance = []
+        icc.K_nullspace = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        icc.interaction_control_mode = [1,1,2,1,1,1]
+        icc.force_command = [0.0,0.0,30.0,0.0,0.0,0.0]
+        icc.interaction_frame = Pose(position=Point(x=0.0,y=0.0,z=0.0), orientation=Quaternion(x=0.0,y=0.0,z=0.0,w=1.0))
+        icc.endpoint_name = "right_hand"
+        icc.in_endpoint_frame = True
+        icc.disable_damping_in_force_control = False
+        icc.disable_reference_resetting = False
+        icc.rotations_for_constrained_zeroG = False
+        print("publishing interaction command")
+        self.pub.publish(icc)
+
+
+    def enter_position_mode(self):
+        rospy.sleep(0.5)
+
+        icc = InteractionControlCommand()
+        icc.header = Header()
+        icc.header.stamp = rospy.Time.now()
+        
+        icc.interaction_control_active = False
+        icc.K_impedance = []
+        icc.max_impedance = []
+        icc.D_impedance = []
+        icc.K_nullspace = []
+        icc.interaction_control_mode = []
+        icc.force_command = []
+        icc.interaction_frame = Pose(position=Point(x=0.0,y=0.0,z=0.0), orientation=Quaternion(x=0.0,y=0.0,z=0.0,w=1.0))
+        icc.endpoint_name = "right_hand"
+        icc.in_endpoint_frame = False
+        icc.disable_damping_in_force_control = False
+        icc.disable_reference_resetting = False
+        icc.rotations_for_constrained_zeroG = False
+        print("publishing interaction command for position")
+        self.pub.publish(icc)
+
+    
+
+class TrajectoryAction(object):
+    def __init__(self, limb, joint_names):
+        self._joint_names = joint_names
+        ns = 'robot/limb/' + limb + '/'
+        self._client = actionlib.SimpleActionClient(
+            ns + "follow_joint_trajectory",
+            FollowJointTrajectoryAction,
+        )
+        self._goal = FollowJointTrajectoryGoal()
+        self._goal_time_tolerance = rospy.Time(0.1)
+        self._goal.goal_time_tolerance = self._goal_time_tolerance
+        server_up = self._client.wait_for_server(timeout=rospy.Duration(10.0))
+        if not server_up:
+            rospy.logerr("Timed out waiting for Joint Trajectory"
+                         " Action Server to connect. Start the action server"
+                         " before running example.")
+            rospy.signal_shutdown("Timed out waiting for Action Server")
+        self.clear(limb)
+
+    def add_point(self, positions, time):
+        point = JointTrajectoryPoint()
+        point.positions = copy(positions)
+        point.time_from_start = rospy.Duration(time)
+        self._goal.trajectory.points.append(point)
+
+    def start(self):
+        self._goal.trajectory.header.stamp = rospy.Time.now()
+        self._client.send_goal(self._goal)
+        self._goal.trajectory.points = []
+        
+
+    def stop(self):
+        self._client.cancel_goal()
+
+    def wait(self, timeout=15.0):
+        self._client.wait_for_result(timeout=rospy.Duration(timeout))
+
+    def result(self):
+        return self._client.get_result()
+
+    def clear(self, limb):
+        self._goal = FollowJointTrajectoryGoal()
+        self._goal.goal_time_tolerance = self._goal_time_tolerance
+        self._goal.trajectory.joint_names = self._joint_names
 
 
 def main():
     print('ok')
 
     rospy.init_node('sawyer_move')
-    r = rospy.Rate(100)
+    r = rospy.Rate(10)
 
     robot_origin_from_ground = rospy.get_param("robot_origin_from_ground")
     sm = SawyerMove(robot_origin_from_ground)
@@ -276,7 +388,9 @@ def main():
     valid_limbs = rp.get_limb_names()
     print("Getting robot state...")
     rs = intera_interface.RobotEnable(CHECK_VERSION)
-    init_state = rs.state()
+    rs.enable()
+
+
     gripper = None
     gripper = intera_interface.Gripper(valid_limbs[0] + '_gripper')
     gripper.set_cmd_velocity(gripper.MAX_VELOCITY)
@@ -289,16 +403,40 @@ def main():
 #0.5cm
 
 
-    #task_init(valid_limbs[0])
+    ip = InteractionPublisher()
+    rospy.sleep(1.0)
+    ip.enter_position_mode()
+    
 
-    sm.init_joints()
+    # #task_init(valid_limbs[0])
 
+    # #sm.init_joints()
+    limb = intera_interface.Limb(valid_limbs[0])
+    joints = limb.joint_names()
+    traj = TrajectoryAction(valid_limbs[0], joints)
+    rospy.on_shutdown(traj.stop)
+
+    #limb.move_to_neutral()
+    a = np.deg2rad(-90)
+    b = np.deg2rad(90)
+    c = np.deg2rad(90)
+
+    goal_joints = {joints[0]:0.0, joints[1]:a, joints[2]:0.0, joints[3]:b, joints[4]:0.0, 
+                    joints[5]:c, joints[6]:1.70}
+    limb.move_to_joint_positions(goal_joints)
+
+    rospy.sleep(1.0)
+
+
+    print("done")
 
 
     while not rospy.is_shutdown():
 
         if sm.preparing_joint:
-            sm.init_joints()
+            #sm.init_joints()
+            ip.sendCommand()
+            ...
 
         else:
             for event in pygame.event.get():
@@ -310,7 +448,7 @@ def main():
                         gripper.open()
                         rospy.sleep(0.3)
                         gripper.close()
-                        sm.torque_mag = 0.20#0.07
+                        sm.torque_mag = 0.0#0.07
 
             keys_pressed = pygame.key.get_pressed()
 
