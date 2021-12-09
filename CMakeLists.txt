@@ -159,10 +159,8 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_control src/control.cpp)
 add_executable(${PROJECT_NAME}_tracking src/tracking/tracking.cpp)
 add_executable(${PROJECT_NAME}_eotracking src/tracking/eo_tracking.cpp src/tracking/eo.cpp)
-add_executable(${PROJECT_NAME}_flirtracking src/tracking/flir_tracking.cpp src/tracking/flir.cpp)
 add_executable(${PROJECT_NAME}_klecontrol 
                 src/kle/kle_control.cpp 
                 src/kle/dist.cpp
@@ -173,25 +171,17 @@ add_executable(${PROJECT_NAME}_klecontrol
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
 ## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
-set_target_properties(${PROJECT_NAME}_control PROPERTIES OUTPUT_NAME control PREFIX "")
 set_target_properties(${PROJECT_NAME}_tracking PROPERTIES OUTPUT_NAME tracking PREFIX "")
 set_target_properties(${PROJECT_NAME}_eotracking PROPERTIES OUTPUT_NAME eotracking PREFIX "")
-set_target_properties(${PROJECT_NAME}_flirtracking PROPERTIES OUTPUT_NAME flirtracking PREFIX "")
 set_target_properties(${PROJECT_NAME}_klecontrol PROPERTIES OUTPUT_NAME klecontrol PREFIX "")
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(${PROJECT_NAME}_control ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME}_tracking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME}_eotracking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(${PROJECT_NAME}_flirtracking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME}_klecontrol ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}_control
-  ${catkin_LIBRARIES} 
-)
-
 target_link_libraries(${PROJECT_NAME}_tracking
   ${catkin_LIBRARIES} ${OpenCV_LIBS} ${Spinnaker_LIBS} aruco ${ueye_LIBS} apriltag
 )
@@ -208,14 +198,6 @@ target_include_directories(${PROJECT_NAME}_eotracking
   PUBLIC ${ueye_INCLUDE_DIR}
 )
 
-target_link_libraries(${PROJECT_NAME}_flirtracking
-  ${catkin_LIBRARIES} ${OpenCV_LIBS} ${Spinnaker_LIBS} apriltag
-)
-
-target_include_directories(${PROJECT_NAME}_flirtracking 
-  PUBLIC ${Spinnaker_INCLUDE_DIR}
-)
-
 target_link_libraries(${PROJECT_NAME}_klecontrol
   ${catkin_LIBRARIES} 
 )
@@ -230,8 +212,7 @@ target_link_libraries(${PROJECT_NAME}_klecontrol
 # Mark executable scripts (Python etc.) for installation
 # in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  nodes/joint_position_keyboard
-  nodes/sawyer_jac_move
+  nodes/force_control
   nodes/collect_data
   nodes/flir_tracking_test
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -239,10 +220,6 @@ catkin_install_python(PROGRAMS
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
-install(TARGETS ${PROJECT_NAME}_control
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
 install(DIRECTORY launch/ 
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 )

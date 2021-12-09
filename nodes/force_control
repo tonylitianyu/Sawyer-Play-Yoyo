@@ -78,8 +78,17 @@ class SawyerMove:
         self.setup_jac()
 
 
-        self.control_type = "kle" #simple || kle
+        self.control_type = "zero" #simple || kle || zero
         self.kle_mag = 0.0
+
+        #force control
+        self.force_pub = rospy.Publisher('/robot/limb/right/interaction_control_command',
+                                   InteractionControlCommand, queue_size=1,
+                                   tcp_nodelay=True)
+        self.enable = intera_interface.RobotEnable(CHECK_VERSION)
+
+        self.diff_from_origin = 0.0
+        self.sum_diff_from_origin = 0.0
 
     def setup_jac(self):
         # load in ros parameters
@@ -98,8 +107,6 @@ class SawyerMove:
         # building robot joint state
         self.num_joints = chain_ee.getNrOfJoints()
         self.joints = kdl.JntArray(self.num_joints)
-
-
 
 
         self.jac_mat = []
@@ -145,21 +152,15 @@ class SawyerMove:
 
             self.ee_z_pos = frame.p[2] + self.robot_origin_from_ground
 
+            self.diff_from_origin = abs(frame.p[2] - 0.587)
 
             if self.control_type == "simple":
-                if self.adjust == 0 and frame.p[2] > 0.63:
-                    self.adjust = 2
+                if self.adjust == 0 and frame.p[2] > 0.75:
+                    self.adjust = 1
 
-                # if self.adjust == 1 and abs(frame.p[2] - 0.587) < 0.08 and abs(frame.p[2] - 0.587) > 0.01:
-                #     self.adjust = 2
-
-                if abs(frame.p[2] - 0.587) < 0.01:
+                if self.diff_from_origin < 0.01:
                     self.adjust = 0
             
-            # if frame.p[2] < 0.60:
-            #     self.torque_mag = 0.01#0.22
-
-
 
             jacobian = kdl.Jacobian(self.num_joints)
             self.jac_ee.JntToJac(self.joints, jacobian)
@@ -168,94 +169,32 @@ class SawyerMove:
         
 
 
-    def init_joints(self):
-        if len(list(self.curr_joint_pos)) > 2:  #?????why would there be empty
-            a = np.deg2rad(-90)
-            b = np.deg2rad(90)
-            c = np.deg2rad(90)
-
-            goal_joints = [0.0, a, 0.0, b, 0.0, c, 1.70]
-
-
-
-            jc_pos = JointCommand()
-            jc_pos.mode = 1
-            jc_pos.names = self.joint_names
-            jc_pos.position = goal_joints
-            self.joint_action_pub.publish(jc_pos)
-            
-            curr_joint_arr = np.array(list(self.curr_joint_pos))[1:8]
-            
-
-            if np.allclose(goal_joints, curr_joint_arr, atol=0.01):
-                print("ready")
-                self.preparing_joint = False
-
-
 
     def loop(self):
         if self.start_flag:
 
             if self.control_type == "simple":
-                if self.adjust == 0 and self.yoyo_rot < 20 and self.yoyo_rotvel < 0.0:
-                    self.vel_mag += self.torque_mag
-
-                    inv_jac = np.linalg.pinv(self.jac_mat)
-
-                    ee_vel_val = np.array([0.0, 0.0, self.vel_mag, 0.0, 0.0, 0.0]).reshape(-1,1)
-                    joint_vel_val = (inv_jac@ee_vel_val).flatten()
-
-
-                    jc = JointCommand()
-                    jc.mode = 2
-                    jc.names = self.joint_names
-                    jc.velocity = joint_vel_val
-                    self.joint_action_pub.publish(jc)   
+                if self.adjust == 0 and self.yoyo_rot < 30 and self.yoyo_rotvel < 0.0: 
+                    self.sum_diff_from_origin = 0.0   
+                    self.send_force_command(-30.0) #500.0
 
                 elif self.adjust == 1:
-                    self.vel_mag = -0.30
-                    inv_jac = np.linalg.pinv(self.jac_mat)
-                    #print(self.vel_mag)
+                    self.sum_diff_from_origin += self.diff_from_origin
 
-                    ee_vel_val = np.array([0.0, 0.0, self.vel_mag, 0.0, 0.0, 0.0]).reshape(-1,1)
-                    joint_vel_val = (inv_jac@ee_vel_val).flatten()
-                    jc = JointCommand()
-                    jc.mode = 2
-                    jc.names = self.joint_names
-                    jc.velocity = joint_vel_val
-                    self.joint_action_pub.publish(jc) 
+                    integral = self.sum_diff_from_origin*5
+                    proportional = self.diff_from_origin*5
+                    down_force = proportional + integral
+                    
+                    if down_force > 30.0:
+                        down_force = 30.0
 
+                    self.send_force_command(down_force)
 
-                elif self.adjust == 2:
-                    self.vel_mag = 0.0
-                    jc_pos = JointCommand()
-                    jc_pos.mode = 1
-
-                    a = np.deg2rad(-90)
-                    b = np.deg2rad(90)
-                    c = np.deg2rad(90)
-
-                    goal_joints = [0.0, a, 0.0, b, 0.0, c, 1.70]
-                    jc_pos.names = self.joint_names
-                    jc_pos.position = goal_joints
-                    self.joint_action_pub.publish(jc_pos)
-
-
-                    #self.adjust = 2
+            elif self.control_type == "kle":
+                ...
 
             else:
-                self.vel_mag = self.kle_mag
-
-                inv_jac = np.linalg.pinv(self.jac_mat)
-
-                ee_vel_val = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(-1,1)
-                joint_vel_val = (inv_jac@ee_vel_val).flatten()
-
-                jc = JointCommand()
-                jc.mode = 2
-                jc.names = self.joint_names
-                jc.velocity = joint_vel_val
-                self.joint_action_pub.publish(jc)  
+                ...
 
             
             robot_state = RobotState()
@@ -270,15 +209,9 @@ class SawyerMove:
                 self.start_pub.publish(Int8(0))
 
 
-class InteractionPublisher():
-    def __init__(self) -> None:
-        self.pub = rospy.Publisher('/robot/limb/right/interaction_control_command',
-                                   InteractionControlCommand, queue_size=1,
-                                   tcp_nodelay=True)
-        self.enable = intera_interface.RobotEnable(CHECK_VERSION)
 
 
-    def sendCommand(self):
+    def send_force_command(self, z_force):
         icc = InteractionControlCommand()
         icc.header = Header()
         icc.header.stamp = rospy.Time.now()
@@ -289,15 +222,15 @@ class InteractionPublisher():
         icc.D_impedance = []
         icc.K_nullspace = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         icc.interaction_control_mode = [1,1,2,1,1,1]
-        icc.force_command = [0.0,0.0,30.0,0.0,0.0,0.0]
+        icc.force_command = [0.0,0.0,z_force,0.0,0.0,0.0]
         icc.interaction_frame = Pose(position=Point(x=0.0,y=0.0,z=0.0), orientation=Quaternion(x=0.0,y=0.0,z=0.0,w=1.0))
         icc.endpoint_name = "right_hand"
         icc.in_endpoint_frame = True
-        icc.disable_damping_in_force_control = False
+        icc.disable_damping_in_force_control = True
         icc.disable_reference_resetting = False
         icc.rotations_for_constrained_zeroG = False
-        print("publishing interaction command")
-        self.pub.publish(icc)
+        #print("publishing interaction command")
+        self.force_pub.publish(icc)
 
 
     def enter_position_mode(self):
@@ -320,62 +253,18 @@ class InteractionPublisher():
         icc.disable_damping_in_force_control = False
         icc.disable_reference_resetting = False
         icc.rotations_for_constrained_zeroG = False
-        print("publishing interaction command for position")
-        self.pub.publish(icc)
+        #print("publishing interaction command for position")
+        self.force_pub.publish(icc)
 
     
 
-class TrajectoryAction(object):
-    def __init__(self, limb, joint_names):
-        self._joint_names = joint_names
-        ns = 'robot/limb/' + limb + '/'
-        self._client = actionlib.SimpleActionClient(
-            ns + "follow_joint_trajectory",
-            FollowJointTrajectoryAction,
-        )
-        self._goal = FollowJointTrajectoryGoal()
-        self._goal_time_tolerance = rospy.Time(0.1)
-        self._goal.goal_time_tolerance = self._goal_time_tolerance
-        server_up = self._client.wait_for_server(timeout=rospy.Duration(10.0))
-        if not server_up:
-            rospy.logerr("Timed out waiting for Joint Trajectory"
-                         " Action Server to connect. Start the action server"
-                         " before running example.")
-            rospy.signal_shutdown("Timed out waiting for Action Server")
-        self.clear(limb)
-
-    def add_point(self, positions, time):
-        point = JointTrajectoryPoint()
-        point.positions = copy(positions)
-        point.time_from_start = rospy.Duration(time)
-        self._goal.trajectory.points.append(point)
-
-    def start(self):
-        self._goal.trajectory.header.stamp = rospy.Time.now()
-        self._client.send_goal(self._goal)
-        self._goal.trajectory.points = []
-        
-
-    def stop(self):
-        self._client.cancel_goal()
-
-    def wait(self, timeout=15.0):
-        self._client.wait_for_result(timeout=rospy.Duration(timeout))
-
-    def result(self):
-        return self._client.get_result()
-
-    def clear(self, limb):
-        self._goal = FollowJointTrajectoryGoal()
-        self._goal.goal_time_tolerance = self._goal_time_tolerance
-        self._goal.trajectory.joint_names = self._joint_names
 
 
 def main():
     print('ok')
 
     rospy.init_node('sawyer_move')
-    r = rospy.Rate(10)
+    r = rospy.Rate(50)
 
     robot_origin_from_ground = rospy.get_param("robot_origin_from_ground")
     sm = SawyerMove(robot_origin_from_ground)
@@ -403,59 +292,41 @@ def main():
 #0.5cm
 
 
-    ip = InteractionPublisher()
-    rospy.sleep(1.0)
-    ip.enter_position_mode()
+
+    sm.enter_position_mode()
     
 
-    # #task_init(valid_limbs[0])
-
-    # #sm.init_joints()
     limb = intera_interface.Limb(valid_limbs[0])
     joints = limb.joint_names()
-    traj = TrajectoryAction(valid_limbs[0], joints)
-    rospy.on_shutdown(traj.stop)
-
-    #limb.move_to_neutral()
     a = np.deg2rad(-90)
     b = np.deg2rad(90)
     c = np.deg2rad(90)
-
     goal_joints = {joints[0]:0.0, joints[1]:a, joints[2]:0.0, joints[3]:b, joints[4]:0.0, 
                     joints[5]:c, joints[6]:1.70}
     limb.move_to_joint_positions(goal_joints)
 
     rospy.sleep(1.0)
 
-
     print("done")
 
 
     while not rospy.is_shutdown():
+        for event in pygame.event.get():
 
-        if sm.preparing_joint:
-            #sm.init_joints()
-            ip.sendCommand()
-            ...
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_q:
+                    sm.start_flag = True
+                    gripper.open()
+                    rospy.sleep(0.3)
+                    gripper.close()
+                    sm.torque_mag = 0.0#0.07
 
-        else:
-            for event in pygame.event.get():
+        keys_pressed = pygame.key.get_pressed()
 
-                if event.type == pygame.KEYDOWN:
+        if keys_pressed[pygame.K_z]:
+            sm.torque_mag = 0.0
 
-                    if event.key == pygame.K_q:
-                        sm.start_flag = True
-                        gripper.open()
-                        rospy.sleep(0.3)
-                        gripper.close()
-                        sm.torque_mag = 0.0#0.07
-
-            keys_pressed = pygame.key.get_pressed()
-
-            if keys_pressed[pygame.K_z]:
-                sm.torque_mag = 0.0
-
-            sm.loop()
+        sm.loop()
         r.sleep()
 
 
