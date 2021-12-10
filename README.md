@@ -3,15 +3,26 @@ Author: Tianyu Li
 
 
 ## Introduction
-This project utilizes data-driven control to make a Sawyer robot to play yoyo.
+This project utilizes data-driven control to make a Sawyer robot to play yoyo. Currently is still under further development.
 
-## Packages
-https://github.com/wuphilipp/sawyer_kdl  
-https://github.com/orocos/orocos_kinematics_dynamics
+## Dependencies
+### Packages
+```
+intera_sdk from Rethink Robotics
+sawyer_kdl https://github.com/wuphilipp/sawyer_kdl  
+orocos_kd  https://github.com/orocos/orocos_kinematics_dynamics
+```
+### Libraries
+```
+AprilTag
+UEye      (for Edmund Optics Camera)
+Spinnaker (for Blackfly Camera)
+Pygame    (mainly for user interface)
+```
 
 ## Instructions
 
-### Environment Setup
+### Connection Setup
 1. Turn on Sawyer
 2. Connect with Sawyer through Ethernet, and ```nmcli connection up Rethink```
 3. Ping 10.42.0.2 or ```sawyer.local``` to confirm connection
@@ -29,17 +40,8 @@ https://github.com/orocos/orocos_kinematics_dynamics
 10. cd into rethink workspace, and ```rm -rf``` the ```build``` and ```devel``` folders
 11. ```catkin_make``` in the rethink workspace and do ```source devel/setup.bash```
 
-### Camera Setup
-1. Connect the camera to the computer
-2. Launch Spinviewer
-3. Set the following
-  - exposure auto: off
-  - exposure time: ~1000
-  - gain auto: off
-  - width: 548
-  - ADC Bit Depth: 8 bit
-  - Back to the top, set Acquisition Frame Rate to 500 Hz
-
 ### Pipeline Launch
 1. ```roslaunch sawyer_move sawyer.launch```
+2. Wind the yoyo up
+3. At the pygame window, press ```q``` to start
 
