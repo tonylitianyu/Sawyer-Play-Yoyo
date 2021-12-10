@@ -3,7 +3,7 @@ Author: Tianyu Li
 
 
 ## Introduction
-This project utilizes data-driven control to make a Sawyer robot to play yoyo. Currently is still under further development.
+This project utilizes data-driven approach to teach a Sawyer robot to play yoyo. There are two high speed camera with perpendicular view to each other to provide state esimation. The package also contains a visual feedback controller for demonstrations. Currently it is still under further development for research.
 
 ## Dependencies
 ### Packages
