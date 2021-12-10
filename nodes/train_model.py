@@ -1,3 +1,7 @@
+"""
+Training a single Koopman Operator
+"""
+
 import numpy as np
 from koopman import Koopman
 import sys
@@ -10,20 +14,11 @@ state_idx = [1,2,5]
 args = sys.argv #-train xxx xxx xxx -test xxx
 
 
-def partition1(max_range, S):
-    max_range = np.asarray(max_range, dtype = int)
-    a = np.indices(max_range + 1)
-    b = a.sum(axis = 0) <= S
-    return (a[:,b].T)
-
-poly_basis = partition1(np.array([1,2,3,4]), 2)
-
-
-
-
 
 # Koopman set up
 def basis(state, action):
+    """Calculate the basis for each state
+    """
     #extra_basis = np.array([np.sin(state[0]), np.sin(state[1]),np.sin(state[2]),np.sin(state[3]),np.cos(state[0]), np.cos(state[1]),np.cos(state[2]),np.cos(state[3])])
     extra_basis = np.array([1,action])
     #np.array([np.cos(state[0]**2), np.cos(state[0]), (state[0]**2)*(action**2), (state[1]**2)*(action**2), np.cos(state[2])*action, action])

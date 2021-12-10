@@ -1,3 +1,4 @@
+
 #include "dist.hpp"
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
@@ -15,9 +16,7 @@ Dist::Dist(MatrixXd &means, MatrixXd &sigmas) :
 means(means),
 sigmas(sigmas)
 {
-
 }
-
 
 void Dist::getPDF(MatrixXd &states, VectorXd &pdf){
 

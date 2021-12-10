@@ -1,3 +1,15 @@
+/// \file  tracking.cpp
+/// \brief Managing tracking data from two cameras
+///
+/// PARAMETERS:
+///     robot_origin_from_ground (double):  robot origin from the ground
+/// PUBLISHES:
+///     yoyo_state_pub (sawyer_move::YoyoState): the current state of the yoyo (pos, vel)
+/// SUBSCRIBES:
+///     robot_state_sub (sawyer_move::RobotState): robot state (could be endpoint pos or joint angle, etc.)
+///     eo_measure_sub (std_msgs::Float64): the measure from eo camera
+///     flir_measure_sub (std_msgs::Float64): the measure from the flir camera
+
 #include "ros/ros.h"
 #include "sawyer_move/YoyoState.h"
 #include "sawyer_move/RobotState.h"
@@ -33,6 +45,7 @@ using namespace Eigen;
 using namespace std;
 using namespace cv;
 
+/// \brief moving average filtering
 class MovingAverage
 {
     private:
@@ -43,6 +56,12 @@ class MovingAverage
         std::deque<float> buffer;
 
     public:
+        /// \brief create moving average object
+        /// \param name - name of the variable needed filter
+        /// \param n_past - number of past data for average
+        /// \param init_val - initial value
+        /// \param cap_val - the maximum and minimum value
+        /// \param cap_diff_val - the maximum and minimum different value
         MovingAverage(const std::string name, const int n_past, double init_val, double cap_val, double cap_diff_val) : 
         n_past(n_past),
         name(name),
@@ -52,6 +71,8 @@ class MovingAverage
             buffer.push_back(init_val);
         }
 
+        /// \brief add new data
+        /// \param new_data - the added data
         void add(float new_data){
             // if (abs(new_data) > cap_val){
             //     new_data = get_last();
@@ -67,6 +88,8 @@ class MovingAverage
             }
         }
 
+        /// \brief take average from the past data
+        /// \return average
         float avg(){
             float sum = 0.0;
             for (int i = 0; i < buffer.size(); i++){
@@ -76,12 +99,15 @@ class MovingAverage
             return sum/buffer.size();
         }
     
+        /// \brief get last data
+        /// \return last data
         float get_last(){
             return buffer[buffer.size() - 1];
         }
 
 };
 
+/// \brief tracking yoyo
 class Tracking
 {
     private:
@@ -104,6 +130,9 @@ class Tracking
         double flir_yoyo_z_dis;
 
     public:
+        /// \brief create tracking object
+        /// \param nh - the node handle for ROS
+        /// \param robot_origin_from_ground - robot origin from the ground
         Tracking(ros::NodeHandle nh, double robot_origin_from_ground) : 
         timer(nh.createTimer(ros::Duration((1.0/100.0)), &Tracking::main_loop, this)),
         yoyo_state_pub(nh.advertise<sawyer_move::YoyoState>("yoyo_state", 1000, true)),
@@ -120,13 +149,20 @@ class Tracking
         {
         }
 
+        /// \brief eo measure callback
+        /// \param data - current measure from eo camera
         void eo_callback(const std_msgs::Float64 & data){
             eo_yoyo_z_dis = data.data;
         }
+
+        /// \brief flir measure callback
+        /// \param data - current measure from flir camera
         void flir_callback(const std_msgs::Float64 & data){
             flir_yoyo_z_dis = data.data;
         }
 
+        /// \brief robot state callback
+        /// \param data - current robot state
         void robot_state_callback(const sawyer_move::RobotState & state_data){
             ee_z_pos = state_data.ee_z_pos;
         }
@@ -200,7 +236,10 @@ class Tracking
 
 };
 
-
+/// \brief load ROS param
+/// \param nh - the node handle for ROS
+/// \param name - param name
+/// \param param - store param
 template <typename T>
 void loadROSParam(ros::NodeHandle nh, string name, T&param){
     if (nh.getParam(name, param)){

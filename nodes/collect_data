@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
 
+""" 
+This node record all data and save into a txt file (later used for training the Koopman)
+
+SUBSCRIBERS:
+  + <yoyo_state_sub> (<YoyoState>) ~ the state of the yoyo (pos, vel)
+  + <robot_state_sub> (<RobotState>) ~ the state of the robot (could be the endpoint pos or joint pos)
+  + <robot_control_sub> (<RobotControl>) ~ the robot control calculated by the KL-ergodic-MPC
+  + <start_sub> (<Int8>) ~ the flag for start recording data
+  
+"""
+
+
 import rospy
 import numpy as np
 from std_msgs.msg import Float32, Int8
@@ -11,6 +23,8 @@ import os
 
 class Collect:
     def __init__(self) -> None:
+        """Init a data collecting object
+        """
         # self.yoyo_pos_sub = rospy.Subscriber('yoyo_pos', Float32, self.pos_callback)
         # self.yoyo_rot_sub = rospy.Subscriber('yoyo_rot', Float32, self.rot_callback)
         self.yoyo_state_sub = rospy.Subscriber('yoyo_state', YoyoState, self.state_callback)
@@ -62,23 +76,40 @@ class Collect:
 
 
     def state_callback(self, data):
+        """callback function for the yoyo state subscriber
+            Args:
+                data (YoyoState) - the current state of the yoyo
+        """
         self.curr_yoyo_pos = data.yoyo_pos
         self.curr_yoyo_pos_vel = data.yoyo_posvel
         self.curr_yoyo_rot = data.yoyo_rot
         self.curr_yoyo_rot_vel = data.yoyo_rotvel
 
     def robot_state_callback(self, data):
+        """callback function for the robot state subscriber
+            Args:
+                data (RobotState) - the current state of the robot arm
+        """
         self.ee_z_pos = data.ee_z_pos
         self.ee_z_vel = data.ee_z_vel
 
     def start_callback(self, data):
+        """callback function for the start flag
+            Args:
+                data (Int8) - the current state of the start flag
+        """
         self.start = data.data
 
     def kle_callback(self, data):
+        """callback function for the kle-mpc controller
+            Args:
+                data (RobotControl) - the current control given by the controller
+        """
         self.kle_vel = data.ee_z_vel
 
     def write_data_to_file(self):
-        
+        """Save data to txt file for later use
+        """
         if self.start == 1:
 
             single_line = [str(time.time() - self.t_0), str(self.curr_yoyo_pos), str(self.curr_yoyo_pos_vel), str(self.curr_yoyo_rot), str(self.curr_yoyo_rot_vel), str(self.ee_z_pos), str(self.ee_z_vel), str(self.kle_vel)]
@@ -89,6 +120,7 @@ class Collect:
 
 
 def main():
+    """ The main() function. """
     rospy.init_node('collect_data')
     r = rospy.Rate(100)
 

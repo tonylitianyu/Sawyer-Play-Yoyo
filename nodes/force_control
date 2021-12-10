@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
 
+""" 
+This node directly sends command to control the Sawyer
+PUBLISHERS:
+    + <start_pub> (<Int8>) ~ the flag for starting playing yoyo
+    + <force_pub> (<InteractionControlCommand>) ~ force control command
+    + <robot_state_pub> (<RobotState>) ~ publish robot state (could be endpoint pos or joint angle, etc.)
+
+ 
+SUBSCRIBERS:
+    + <yoyo_state_sub> (<YoyoState>) ~ the current state of the yoyo (pos, vel)
+    + <joint_state_sub> (<JointState>) ~ the current joint state of the robot
+    + <robot_control_sub> (<RobotControl>) ~ the robot control calculated by the KL-ergodic-MPC
+  
+"""
 
 import argparse
 
@@ -41,6 +55,10 @@ import time
 class SawyerMove:
 
     def __init__(self, robot_origin_from_ground) -> None:
+        """Init a node for commanding Sawyer movement
+            Args:
+                robot_origin_from_ground (float) - the robot origin from the ground
+        """
         self.start_flag = False
         self.start_pub = rospy.Publisher('start', Int8, queue_size=10)
 
@@ -51,7 +69,6 @@ class SawyerMove:
         self.yoyo_rotvel = 0.0
         
         self.joint_state_sub = rospy.Subscriber('/robot/joint_states', JointState, self.jss_callback)
-        self.joint_action_pub = rospy.Publisher('/robot/limb/right/joint_command', JointCommand, queue_size=10)
 
         self.robot_control_sub = rospy.Subscriber('robot_control', RobotControl, self.control_callback)
         self.robot_state_pub = rospy.Publisher('robot_state', RobotState, queue_size=10)
@@ -78,7 +95,7 @@ class SawyerMove:
         self.setup_jac()
 
 
-        self.control_type = "zero" #simple || kle || zero
+        self.control_type = "simple" #simple || kle || zero
         self.kle_mag = 0.0
 
         #force control
@@ -91,6 +108,9 @@ class SawyerMove:
         self.sum_diff_from_origin = 0.0
 
     def setup_jac(self):
+        """Set up jacobian solvers using KDL
+        """
+
         # load in ros parameters
         self.baselink = rospy.get_param("sawyer/baselink")
         self.endlink = rospy.get_param("sawyer/endlink")
@@ -114,6 +134,13 @@ class SawyerMove:
 
 
     def kdl_to_mat(self, m):
+        """Turn kdl matrix into numpy
+            Args:
+                m (KDL Jacobian Object) matrix in kdl library format
+
+            Returns:
+                mat (numpy matrix) matrix in numpy format
+        """
         mat =  np.mat(np.zeros((m.rows(), m.columns())))
         for i in range(m.rows()):
             for j in range(m.columns()):
@@ -122,13 +149,25 @@ class SawyerMove:
 
 
     def state_callback(self, data):
+        """callback function for the yoyo state subscriber
+            Args:
+                data (YoyoState) - the current state of the yoyo
+        """
         self.yoyo_rot = data.yoyo_rot
         self.yoyo_rotvel = data.yoyo_rotvel
 
     def control_callback(self, data):
+        """callback function for the kle-mpc controller
+            Args:
+                data (RobotControl) - the current control given by the controller
+        """
         self.kle_mag = data.ee_z_vel
 
     def jss_callback(self, data):
+        """callback function for the arm joint
+            Args:
+                data (JointState) - the current joint state of the Sawyer arm
+        """
         self.curr_joint_pos = data.position
 
         #self.joint_names = data.name
@@ -152,13 +191,13 @@ class SawyerMove:
 
             self.ee_z_pos = frame.p[2] + self.robot_origin_from_ground
 
-            self.diff_from_origin = abs(frame.p[2] - 0.587)
+            self.diff_from_origin = frame.p[2] - 0.587
 
             if self.control_type == "simple":
                 if self.adjust == 0 and frame.p[2] > 0.75:
                     self.adjust = 1
 
-                if self.diff_from_origin < 0.01:
+                if frame.p[2] < 0.587:
                     self.adjust = 0
             
 
@@ -171,19 +210,25 @@ class SawyerMove:
 
 
     def loop(self):
+        """A running loop for this node
+        """
         if self.start_flag:
 
             if self.control_type == "simple":
                 if self.adjust == 0 and self.yoyo_rot < 30 and self.yoyo_rotvel < 0.0: 
                     self.sum_diff_from_origin = 0.0   
-                    self.send_force_command(-30.0) #500.0
+                    self.send_force_command(-60.0) #500.0
 
                 elif self.adjust == 1:
                     self.sum_diff_from_origin += self.diff_from_origin
 
-                    integral = self.sum_diff_from_origin*5
-                    proportional = self.diff_from_origin*5
+                    integral = self.sum_diff_from_origin*0.5
+                    proportional = self.diff_from_origin*200
                     down_force = proportional + integral
+                    print("====")
+                    print("intergal",integral)
+                    print("proportional",proportional)
+                    print("down force", down_force)
                     
                     if down_force > 30.0:
                         down_force = 30.0
@@ -212,6 +257,10 @@ class SawyerMove:
 
 
     def send_force_command(self, z_force):
+        """construct force command and publish it
+            Args:
+                z_force (float) - the force on the z-axis (flip the sign)
+        """
         icc = InteractionControlCommand()
         icc.header = Header()
         icc.header.stamp = rospy.Time.now()
@@ -234,6 +283,8 @@ class SawyerMove:
 
 
     def enter_position_mode(self):
+        """exit force control mode
+        """
         rospy.sleep(0.5)
 
         icc = InteractionControlCommand()
@@ -258,9 +309,8 @@ class SawyerMove:
 
     
 
-
-
 def main():
+    """ The main() function. """
     print('ok')
 
     rospy.init_node('sawyer_move')

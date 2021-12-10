@@ -9,10 +9,10 @@ add_compile_options(-std=c++17)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-    roscpp
-    std_msgs
     cmake_modules
     message_generation
+    roscpp
+    std_msgs
 )
 
 
@@ -72,9 +72,9 @@ find_library(ueye_LIBS NAMES ueye_api
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  YoyoState.msg
-  RobotState.msg
   RobotControl.msg
+  RobotState.msg
+  YoyoState.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -129,7 +129,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES sawyer_move
-   CATKIN_DEPENDS roscpp std_msgs message_runtime
+   CATKIN_DEPENDS message_runtime roscpp std_msgs
    DEPENDS EIGEN3
 )
 
@@ -160,12 +160,12 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_tracking src/tracking/tracking.cpp)
-add_executable(${PROJECT_NAME}_eotracking src/tracking/eo_tracking.cpp src/tracking/eo.cpp)
+add_executable(${PROJECT_NAME}_eotracking src/tracking/eo.cpp src/tracking/eo_tracking.cpp)
 add_executable(${PROJECT_NAME}_klecontrol 
-                src/kle/kle_control.cpp 
                 src/kle/dist.cpp
                 src/kle/env.cpp 
-                src/kle/kle.cpp)
+                src/kle/kle.cpp
+                src/kle/kle_control.cpp )
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

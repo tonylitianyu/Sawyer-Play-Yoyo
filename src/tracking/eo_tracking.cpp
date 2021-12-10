@@ -1,3 +1,14 @@
+/// \file  eo_tracking.cpp
+/// \brief manage datastream from the edmund optics camera
+///
+/// PARAMETERS:
+///     width (int):  The width of the image view
+///     height (int):  The height of the image view
+///     eo_dis (double):  The distance from the robot
+///     eo_height (double):  The height from the ground
+/// PUBLISHES:
+///     eo_measure_pub (std_msgs::Float64): the apriltag center z pos measured by the camera
+
 #include "ros/ros.h"
 #include "std_msgs/Float64.h"
 #include <eigen3/Eigen/Core>
@@ -31,6 +42,7 @@ using namespace std;
 using namespace cv;
 using namespace UEYE;
 
+/// \brief edmund optics tracking object
 class EO_Tracking{
     private:
         ros::Timer timer;
@@ -41,6 +53,9 @@ class EO_Tracking{
         apriltag_detector_t *td_eo;
 
     public:
+        /// \brief create the initial setup for the simulator
+        /// \param nh - the node handle for ROS
+        /// \param camera - the camera object
         EO_Tracking(ros::NodeHandle nh, EO &camera) : 
         timer(nh.createTimer(ros::Duration((1.0/100.0)), &EO_Tracking::main_loop, this)),
         eo_measure_pub(nh.advertise<std_msgs::Float64>("eo_measure", 1000, true)),
@@ -108,6 +123,10 @@ class EO_Tracking{
         }
 };
 
+/// \brief load ROS param
+/// \param nh - the node handle for ROS
+/// \param name - param name
+/// \param param - store param
 template <typename T>
 void loadROSParam(ros::NodeHandle nh, string name, T&param){
     if (nh.getParam(name, param)){

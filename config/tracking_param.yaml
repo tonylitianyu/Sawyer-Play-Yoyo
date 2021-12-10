@@ -1,12 +1,12 @@
 #Tracking parameters
-width: 720
-height: 300
-dis_per_pixel_eo: 0.002127659574468085
-dis_per_pixel_flir: 0.002127659574468085
-robot_origin_z_eo: 188.0
-robot_origin_z_flir: 188.0
-robot_origin_from_ground: 0.85
-eo_height: 0.80
-flir_height: 0.80
-eo_dis: 1.7018
-flir_dis: 1.2192
+width: 720                                  #width of the both camera views
+height: 300                                 #height of the bothe camera views
+dis_per_pixel_eo: 0.002127659574468085      #distance per pixel from eo camera (calibration purpose)
+dis_per_pixel_flir: 0.002127659574468085    #distance per pixel from flir camera (calibration purpose)
+robot_origin_z_eo: 188.0                    #robot origin in the eo camera view
+robot_origin_z_flir: 188.0                  #robot origin in the flir camera view
+robot_origin_from_ground: 0.85              #robot origin from the ground
+eo_height: 0.80                             #eo camera height from the ground
+flir_height: 0.80                           #flir camera height from the ground
+eo_dis: 1.7018                              #eo distance from the robot
+flir_dis: 1.2192                            #flir distance from the robot

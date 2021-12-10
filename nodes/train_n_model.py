@@ -1,3 +1,7 @@
+"""
+Training hybrid Koopman Operators
+"""
+
 import numpy as np
 from koopman import Koopman
 import sys
@@ -11,6 +15,11 @@ state_idx = [1,2,5]
 args = sys.argv #-train xxx xxx xxx -test xxx
 # Koopman set up
 def basis_down(state, action):
+    """Calculate the basis for each state when the yoyo is moving down
+        Args:
+            state (array) - current state
+            action (array) - current action
+    """
     #extra_basis = np.array([np.sin(state[0]), np.sin(state[1]),np.sin(state[2]),np.sin(state[3]),np.cos(state[0]), np.cos(state[1]),np.cos(state[2]),np.cos(state[3])])
     extra_basis = np.array([np.sin(state[0])**2,1,action])
     psi = np.hstack((state, extra_basis))
@@ -23,6 +32,11 @@ km_down = Koopman(basis_down, num_basis_down, num_state)
 
 
 def basis_up(state, action):
+    """Calculate the basis for each state when the yoyo is moving down
+        Args:
+            state (array) - current state
+            action (array) - current action
+    """
     #extra_basis = np.array([np.sin(state[0]), np.sin(state[1]),np.sin(state[2]),np.sin(state[3]),np.cos(state[0]), np.cos(state[1]),np.cos(state[2]),np.cos(state[3])])
     extra_basis = np.array([np.sin(state[0])**2,1,action])
     psi = np.hstack((state, extra_basis))

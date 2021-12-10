@@ -1,15 +1,20 @@
+"""Visualization of the recorded yoyo and robot data
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-
-
-
 
 #date = sys.argv[1]
 
 
 class DataProcessing:
     def __init__(self, start_index, file_name) -> None:
+        """Init an object for processing data
+            Args:
+                start_index (int) - the start index for visualizing data
+                file_name   (str) - the file name for the data
+        """
         self.line_list = []
 
         self.file = open("../data/"+file_name+".txt", "r")
@@ -18,7 +23,19 @@ class DataProcessing:
 
 
     def extract_state(self, state_list):
-
+        """Extract state list into different variables
+            Args:
+                state_list (array) - the entire dataset in an 2d array
+            
+            Returns:
+                t_step    (array) - time stamp
+                z_pos     (array) - yoyo z position
+                z_vel     (array) - yoyo z velocity
+                rot       (array) - yoyo rotation angle
+                rot_vel   (array) - yoyo rotation velocity
+                ee_pos    (array) - robot endpoint z position
+                vel_input (array) - control input
+        """
         t_step = state_list[self.start_index:,0]
         z_pos = state_list[self.start_index:,1]
         z_vel = state_list[self.start_index:,2]
@@ -30,6 +47,11 @@ class DataProcessing:
         return t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input
 
     def plot(self, state, show_time=False):
+        """Plot the state
+            Args:
+                state     (array) - the entire dataset in an 2d array
+                show_time (bool)  - the x axis is time or index
+        """
         fig, axs = plt.subplots(6)
         t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = self.extract_state(state)
 
@@ -55,6 +77,11 @@ class DataProcessing:
         plt.show()
 
     def compare(self, state1, state2):
+        """Overlay two dataset to compare
+            Args:
+                state1 (array) - the entire first dataset in an 2d array
+                state2 (array) - the entire second dataset in an 2d array
+        """
 
         fig, axs = plt.subplots(6)
         t_step1, z_pos1, z_vel1, rot1, rot_vel1, ee_pos1, vel_input1 = self.extract_state(state1)
@@ -91,6 +118,10 @@ class DataProcessing:
         
 
     def process(self):
+        """Post processing the data (noise filtering, etc.)
+            Returns:
+                processed_state (array) - postprocessed data
+        """
         for line in self.file:
             stripped_line = line.strip()
             curr_pos_list = stripped_line.split(', ')
@@ -107,52 +138,19 @@ class DataProcessing:
 
         t_step, z_pos, z_vel, rot, rot_vel, ee_pos, vel_input = self.extract_state(line_list)
 
-        # z_pos += 1.0
-        # ee_pos += 1.0
-
-
-        # for rv in range(1, len(rot_vel)):
-        #     rot_vel[rv] = (rot[rv] - rot[rv-1])/(t_step[rv] - t_step[rv-1])
-
-
-        # #smooth out yoyo pos velocity
-        # for z in range(1, len(z_vel) - 1):
-        #     if abs(z_vel[z - 1] - z_vel[z]) > 2.0:
-        #         z_vel[z] = z_vel[z-1]#(z_vel[z-1] + z_vel[z+1])/2
-
-
-        # z_vel = self.smooth_with_moving_average(z_vel, 10)
-
-
-
-        # #smooth out rotation velocity
-        # for r in range(2,len(rot_vel)-1):
-        #     if rot_vel[r] > 300 or rot_vel[r] < -300:
-        #         rot_vel[r] = (rot_vel[r-1] + rot_vel[r-2])/2.0
-
-
-        # rot_vel = self.smooth_with_moving_average(rot_vel, 10)
-
-        # rot = rot % 2*np.pi
-        # rot = np.unwrap(rot)
-
-
-        # start_index = 800
-        # mean_diff = 0.0
-        # while mean_diff < 0.5:
-        #     temp_rot_vel = rot_vel[start_index - 10 : start_index + 1]
-        #     mean_diff = abs(np.diff(temp_rot_vel).mean())
-        #     print(mean_diff)
-        #     start_index += 1
-
-        # self.start_index = start_index
-
         processed_state = np.hstack((t_step.reshape(-1,1), z_pos.reshape(-1,1), z_vel.reshape(-1,1), rot.reshape(-1,1), rot_vel.reshape(-1,1), ee_pos.reshape(-1,1), vel_input.reshape(-1,1)))
 
         return processed_state
 
 
     def smooth_with_moving_average(self,arr, ma):
+        """Noise filtering with moving average
+            Args:
+                arr (array) - data before filtering
+                ma (int) - number of past data for average
+            Returns:
+                arr (array) - filtered data
+        """
         arr_temp = arr.copy()
         for r in range(ma,len(arr_temp)):
             ma_sum = 0.0
@@ -167,6 +165,13 @@ class DataProcessing:
 
 
     def split(self, state_list):
+        """Split data into downward motion and upward motion by checking yoyo z vel
+            Args:
+                state_list (array) - the entire dataset in an 2d array
+            Returns:
+                down_motion (array) - downward motion group
+                up_motion   (array) - upward motion group
+        """
         z_vel = state_list[:,2]
         up_motion = []
         down_motion = []
@@ -180,10 +185,17 @@ class DataProcessing:
         down_motion = np.array(down_motion)
         up_motion = np.array(up_motion)
 
-
         return down_motion, up_motion
 
     def create_state_pair(self, truncated_state, state_indexes):
+        """create state pair for training Koopman
+            Args:
+                truncated_state (array) - either the upward motion data or downward motion data
+                state_indexes   (array) - the features (states) that will be used for Koopman
+            Returns:
+                data_group (tuple) - the (state, next_state) pair
+                action_group   (array) - action data that leads state to next_state
+        """
         z_pos = truncated_state[:,1]
         data_group = []
         action_group = []

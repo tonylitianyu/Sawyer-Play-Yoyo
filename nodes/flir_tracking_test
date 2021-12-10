@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+""" 
+This node configure and load the FLIR (blackfly) camera
+PUBLISHERS:
+  + <flir_measure> (<Float64>) ~ the yoyo z position measured by the camera
+"""
+
 import rospy
 import numpy as np
 from geometry_msgs.msg import Pose
@@ -13,6 +19,11 @@ import time
 
 class Flir_Tracking:
     def __init__(self,flir_height,flir_dis) -> None:
+        """Init a FLIR camera object with preset configuration
+            Args:
+                flir_height (float) - camera height from the ground
+                flir_dis    (float) - camera distance from the robot
+        """
         self.flir_measure_pub = rospy.Publisher('flir_measure', Float64, queue_size=10)
 
 
@@ -38,7 +49,8 @@ class Flir_Tracking:
         self.flir_dis = flir_dis
 
     def load_coefficients(self):
-        '''Loads camera matrix and distortion coefficients.'''
+        """Loads camera matrix and distortion coefficients.
+        """
         cv_file = cv2.FileStorage('/home/tianyu/Documents/Developer/camera_cpp/src/flir_calibration.yml', cv2.FILE_STORAGE_READ)
         camera_matrix = cv_file.getNode('camera_matrix').mat()
         dist_matrix = cv_file.getNode('distortion_coefficients').mat()
@@ -46,6 +58,14 @@ class Flir_Tracking:
         return camera_matrix, dist_matrix
 
     def apriltag_detection(self, gray_img, id):
+        """Detect center of the apriltag
+            Args:
+                gray_img (nparray) - the latest image array in grayscale
+                id       (int) - the target apriltag id in the image
+            
+            Returns:
+                yoyo_center (list) - the yoyo center in pixel coordinate
+        """
         results = self.detector.detect(gray_img)
         yoyo_center = []
         for i in range(len(results)):
@@ -58,6 +78,8 @@ class Flir_Tracking:
         return yoyo_center
 
     def measure(self):
+        """Calculate the yoyo z pos in real world based on the pixel position
+        """
         start = time.time()
         ret, frame = self.cap.read()
         frame = cv2.rotate(frame, 0)
@@ -84,6 +106,7 @@ class Flir_Tracking:
         #print(time.time() - start)
 
 def main():
+    """ The main() function. """
     rospy.init_node('flir_tracking_test')
     r = rospy.Rate(100)
 

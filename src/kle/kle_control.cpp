@@ -1,3 +1,13 @@
+/// \file  kle_control.cpp
+/// \brief kle-mpc calculation
+///
+/// PUBLISHES:
+///     robot_control_pub (sawyer_move::RobotControl): the robot control calculated by the KL-ergodic-MPC
+/// SUBSCRIBES:
+///     yoyo_state_sub (sawyer_move::YoyoState): the current state of the yoyo (pos, vel)
+///     robot_state_sub (sawyer_move::RobotState): robot state (could be endpoint pos or joint angle, etc.)
+///     start_sub (std_msgs::Int8): the flag for starting playing yoyo
+
 #include "ros/ros.h"
 #include "sawyer_move/YoyoState.h"
 #include "sawyer_move/RobotState.h"
@@ -24,6 +34,7 @@ using namespace env;
 using namespace kle;
 using namespace dist;
 
+/// \brief kle controller
 class Controller
 {
     private:
@@ -50,6 +61,14 @@ class Controller
         double kle_R;
 
     public:
+        /// \brief create controller object
+        /// \param nh - the node handle for ROS
+        /// \param env - learned model 
+        /// \param dist - target distribution
+        /// \param horizon - prediciton horizon
+        /// \param var - variance for state distribution
+        /// \param kle_R - penalty for kle control
+        /// \param buffer_size - maximum buffer size
         Controller(ros::NodeHandle nh, Env env, Dist dist, const int horizon, double var, double kle_R, int buffer_size) : 
         timer(nh.createTimer(ros::Duration(0.01), &Controller::main_loop, this)),
         yoyo_state_sub(nh.subscribe("yoyo_state", 1000, &Controller::yoyo_state_callback, this)),
@@ -66,10 +85,14 @@ class Controller
         {
         }
 
+        /// \brief start flag callback
+        /// \param data - received flag
         void start_callback(const std_msgs::Int8 & data){
             start_flag = data.data;
         }
 
+        /// \brief yoyo state callback
+        /// \param state_data - received yoyo state data
         void yoyo_state_callback(const sawyer_move::YoyoState & state_data){
             state[0] = state_data.yoyo_pos;
             state[1] = state_data.yoyo_posvel;
@@ -77,6 +100,8 @@ class Controller
             //state[3] = state_data.yoyo_rotvel;
         }
 
+        /// \brief robot state callback
+        /// \param point - received robot state data
         void robot_state_callback(const sawyer_move::RobotState & state_data){
             state[2] = state_data.ee_z_pos;
         }
@@ -110,6 +135,8 @@ class Controller
 
 
 //source: https://stackoverflow.com/questions/34247057/how-to-read-csv-file-and-assign-to-eigen-matrix
+/// \brief load csv file into eigen
+/// \param path - the csv stored path
 template<typename M>
 M load_csv (const std::string & path) {
     std::ifstream indata;
